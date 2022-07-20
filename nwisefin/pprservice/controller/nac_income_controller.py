@@ -677,4 +677,3 @@ def modify_edit(request):
         ppr_data = pprservice.fetch_GL_subgrp(query)
         response = HttpResponse(ppr_data.get(), content_type="application/json")
         return response
-
