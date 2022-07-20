@@ -334,4 +334,6 @@ class ppr_source_response:
         self.month_balance = month_balance
     def set_status(self,status):
         self.status=status
+    def set_average_amount(self,average_amount):
+        self.average_amount = average_amount
 

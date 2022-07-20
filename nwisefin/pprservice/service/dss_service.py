@@ -1,5 +1,7 @@
-import json
-from datetime import timedelta
+# import json
+from datetime import timedelta, datetime
+#
+
 
 import numpy as np
 import pandas as pd
@@ -8,7 +10,6 @@ from django.db.models import Count, F, Q, Sum
 from django.http import HttpResponse
 
 from pprservice.data.request.nac_income_request import ppr_clientrequest
-
 from utilityservice.data.response.nwisefinerror import NWisefinError
 from utilityservice.data.response.nwisefinerrorconstants import ErrorMessage, ErrorDescription
 from utilityservice.data.response.nwisefinlist import NWisefinList
@@ -17,14 +18,14 @@ from utilityservice.data.response.nwisefinsuccess import NWisefinSuccess, Succes
 from utilityservice.service.threadlocal import NWisefinThread
 from utilityservice.service.applicationconstants import ApplicationNamespace
 from pprservice.models.pprmodel import DSS_Format_Date,DSS_Format_Month,Ppr_Sources,Head_Groups,Sub_Groups,GL_Subgroup
-from pprservice.util.pprutility import Fees_type, Client_flag, Activestatus, Asset_class, USER_SERVICE
-from pprservice.data.response.nac_income_respone import ppr_clientresponse,Income_details_response as Income_details_response
-from datetime import datetime
+# from pprservice.util.pprutility import Fees_type, Client_flag, Activestatus, Asset_class, USER_SERVICE
+# from pprservice.data.response.nac_income_respone import ppr_clientresponse,Income_details_response as Income_details_response
+# from datetime import datetime
 from pprservice.data.response.nac_income_respone import ppr_clientresponse, \
     Income_details_response as Income_details_response, ppr_source_response
-from wisefinapi.internal.tokenhandler import TokenHandler
-from nwisefin.settings import SERVER_IP
-
+# from wisefinapi.internal.tokenhandler import TokenHandler
+# from nwisefin.settings import SERVER_IP
+#
 class DSS_Service(NWisefinThread):
     def __init__(self, scope):
         super().__init__(scope)
@@ -880,3 +881,87 @@ class DSS_Service(NWisefinThread):
         # if pro_list3.data != None:
         #     pro_list.data+=pro_list3.data
         return pro_list3
+    def fetch_dssdate_average_list(self, filterobj):
+        pro_list = NWisefinList()
+        from_date = filterobj.get_from_date()
+        to_date = filterobj.get_to_date()
+        input_fromdate = datetime.strptime(from_date, "%Y-%m-%d")
+        input_todate = datetime.strptime(to_date, "%Y-%m-%d")
+        difference = abs((input_fromdate - input_todate).days)
+
+        condition = Q(status=1) & Q(date__range=[input_fromdate.date(), input_todate.date()]) & (
+                Q(gl_subgroup__gl_no__startswith='1') | Q(gl_subgroup__gl_no__startswith='2'))
+        condition2 = Q(status=1, date__range=[input_fromdate.date(), input_todate.date()],
+                       gl_subgroup__head_group__head_group__source_id=filterobj.get_id())
+        condition3 = Q(status=1, date__range=[input_fromdate.date(), input_todate.date()],
+                       gl_subgroup__head_group__head_group_id=filterobj.get_id())
+        condition4 = Q(status=1, date__range=[input_fromdate.date(), input_todate.date()],
+                       gl_subgroup__head_group_id=filterobj.get_id())
+
+        if filterobj.get_type() != None and filterobj.get_type() != "":
+            if filterobj.get_type() == 1:
+                filter_var = DSS_Format_Date.objects.using(self._current_app_schema()).filter(condition).values(
+                    "gl_subgroup__head_group__head_group__source__id",
+                    "gl_subgroup__head_group__head_group__source__name").annotate(total_amount=Sum('closing_balance'))
+
+            elif filterobj.get_type() == 2:
+                filter_var = DSS_Format_Date.objects.using(self._current_app_schema()).filter(condition2).values(
+                    "gl_subgroup__head_group__head_group__id",
+                    "gl_subgroup__head_group__head_group__name").annotate(total_amount=Sum('closing_balance'))
+
+            elif filterobj.get_type() == 3:
+                filter_var = DSS_Format_Date.objects.using(self._current_app_schema()).filter(condition3).values(
+                    "gl_subgroup__head_group__id", "gl_subgroup__head_group__name",
+                ).annotate(total_amount=Sum('closing_balance'))
+
+            elif filterobj.get_type() == 4:
+                filter_var = DSS_Format_Date.objects.using(self._current_app_schema()).filter(condition4).values(
+                    "gl_subgroup__id", "gl_subgroup__description", "gl_subgroup__gl_no",
+                ).annotate(total_amount=Sum('closing_balance'))
+
+            if len(filter_var) != 0:
+                for data in filter_var:
+                    value = []
+                    if filterobj.get_type() == 1:
+                        id_grp = data["gl_subgroup__head_group__head_group__source__id"]
+                        name = data["gl_subgroup__head_group__head_group__source__name"]
+                        total_amount = data["total_amount"]
+                        average_amount = total_amount / difference
+                        ppr_response = ppr_source_response()
+                        ppr_response.set_average_amount(average_amount)
+                        value.append(ppr_response)
+                        data1 = {"name": name, "value": value, "id": id_grp}
+                        pro_list.append(data1)
+                    elif filterobj.get_type() == 2:
+                        id_grp = data["gl_subgroup__head_group__head_group__id"]
+                        name = data["gl_subgroup__head_group__head_group__name"]
+                        total_amount = data["total_amount"]
+                        average_amount = total_amount / difference
+                        ppr_response = ppr_source_response()
+                        ppr_response.set_average_amount(average_amount)
+                        value.append(ppr_response)
+                        data1 = {"name": name, "value": value, "id": id_grp}
+                        pro_list.append(data1)
+                    elif filterobj.get_type() == 3:
+                        id_grp = data["gl_subgroup__head_group__id"]
+                        name = data["gl_subgroup__head_group__name"]
+                        total_amount = data["total_amount"]
+                        average_amount = total_amount / difference
+                        ppr_response = ppr_source_response()
+                        ppr_response.set_average_amount(average_amount)
+                        value.append(ppr_response)
+                        data1 = {"name": name, "value": value, "id": id_grp}
+                        pro_list.append(data1)
+                    elif filterobj.get_type() == 4:
+                        id_grp = data["gl_subgroup__id"]
+                        name = data["gl_subgroup__gl_no"] + " -(" + str(data['gl_subgroup__description']) + ")"
+                        total_amount = data["total_amount"]
+                        average_amount = total_amount / difference
+                        ppr_response = ppr_source_response()
+                        ppr_response.set_average_amount(average_amount)
+                        value.append(ppr_response)
+                        data1 = {"name": name, "value": value, "id": id_grp}
+                        pro_list.append(data1)
+                return pro_list
+            else:
+                return pro_list
