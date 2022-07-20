@@ -3,7 +3,7 @@ import requests
 from nwisefin.settings import SERVER_IP
 import json
 
-class userservice:
+class Userservice:
     def branch_data(self, request):
         token_name = request.headers['Authorization']
         headers = {'Authorization': token_name}
@@ -13,44 +13,10 @@ class userservice:
         api_jsondata = {"branch_id":[],"branch_code":[]}
 
         api_jsondata = json.dumps(api_jsondata)
-        resp = requests.post(full_url, headers=headers,data=api_jsondata, verify=False)
-        return resp
+        response = requests.post(full_url, headers=headers,data=api_jsondata, verify=False)
+        return response
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class masterservice:
+class Masterservice:
     def get_asset_data(self, request):
         token_name = request.headers['Authorization']
         headers = {'Authorization': token_name}
@@ -60,8 +26,8 @@ class masterservice:
         api_jsondata = {"branch_id": [], "branch_code": []}
 
         api_jsondata = json.dumps(api_jsondata)
-        resp = requests.post(full_url, headers=headers, data=api_jsondata, verify=False)
-        return resp
+        response = requests.post(full_url, headers=headers, data=api_jsondata, verify=False)
+        return response
     def get_product_data(self, request):
         token_name = request.headers['Authorization']
         headers = {'Authorization': token_name}
@@ -71,8 +37,8 @@ class masterservice:
         api_jsondata = {"product_id":[],"product_code":[],"product_name":[]}
 
         api_jsondata = json.dumps(api_jsondata)
-        resp = requests.post(full_url, headers=headers, data=api_jsondata, verify=False)
-        return resp
+        response = requests.post(full_url, headers=headers, data=api_jsondata, verify=False)
+        return response
 
     def get_client_data(self, request):
         token_name = request.headers['Authorization']
@@ -83,8 +49,8 @@ class masterservice:
         api_jsondata = {"client_id":[],"client_code":[],"client_name":[]}
 
         api_jsondata = json.dumps(api_jsondata)
-        resp = requests.post(full_url, headers=headers, data=api_jsondata, verify=False)
-        return resp
+        response = requests.post(full_url, headers=headers, data=api_jsondata, verify=False)
+        return response
 
     def get_biz_data(self, request):
         token_name = request.headers['Authorization']
@@ -95,6 +61,6 @@ class masterservice:
         api_jsondata = {"bs_id":[],"bs_code":[],"bs_name":[]}
 
         api_jsondata = json.dumps(api_jsondata)
-        resp = requests.post(full_url, headers=headers, data=api_jsondata, verify=False)
-        return resp
+        response = requests.post(full_url, headers=headers, data=api_jsondata, verify=False)
+        return response
 

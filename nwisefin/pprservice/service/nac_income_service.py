@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from django.db.models import Count, F, Q, Sum
 from django.http import HttpResponse
-from ppr_middleware.external_api import userservice,masterservice
+from ppr_middleware.external_api import Userservice,Masterservice
 # # from masterservice.models import APsubcategory, APexpensegroup
 # from pprservice.data.request.nac_income_request import ppr_clientrequest
 # from pprservice.data.response.nac_income_respone import Income_details_month
@@ -81,11 +81,8 @@ class Income_Service(NWisefinThread):
 #         return success_obj
 #
     def fileupload_cc_income(self, transac_obj, employee_id,request):
-        # masterservice = MASTER_SERVICE(self._scope())
-        master_service = masterservice()
-        # user_service = USER_SERVICE(self._scope())
-        user_service = userservice()
-
+        master_service = Masterservice()
+        user_service = Userservice()
         gl_data = GL_Subgroup.objects.using(self._current_app_schema()).filter(status=1)
         main_df = pd.DataFrame(transac_obj)
         branch_data = user_service.branch_data(request)
