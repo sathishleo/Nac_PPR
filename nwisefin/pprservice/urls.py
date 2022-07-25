@@ -17,7 +17,7 @@ urlpatterns = [
                   # path('ppr_supplier', ppr_report.ppr_supplier, name='ppr_supplier'),
                   # path('ppr_suppliergrp', ppr_report.ppr_suppliergrp, name='ppr_suppliergrp'),
                   # path('ppr_mstbusiness_segment', ppr_report.ppr_mstbusiness_segment, name='ppr_mstbusiness_segment'),
-                  path('ppr_bs', ppr_report.ppr_businesssegment, name='ppr_bs'),
+                  # path('ppr_bs', ppr_report.ppr_businesssegment, name='ppr_bs'),
                   # path('ppr_cc', ppr_report.ppr_costcentre, name='ppr_cc'),
                   # path('ppr_supplier_dropdown', ppr_report.ppr_supplier_dropdown, name='ppr_supplier_dropdown'),
                   # path('ppr_cccbs', ppr_report.ppr_ccbsdetials, name='ppr_cccbs'),
@@ -42,12 +42,12 @@ urlpatterns = [
                   # path('budget_finyear_search', budget_builder.get_budgetbuilder_finyear, name='budget_finyear_search'),
                   # path('budget_remark', budget_builder.get_budget_remark, name='budget_remark'),
                   # path('supplier_list',budget_builder.supplier_list, name='supplier_list'),
-                  #
+
                   # # allocation urls
                   # path('businesscategory', businesscategorycontroller.businesscategory, name='businesscategory'),
                   # path('businesscategory/<businesscategory_id>', businesscategorycontroller.fetch_businesscategory,name='fetch_businesscategory'),
                   # path('businesscategory_search', businesscategorycontroller.businesscategory_search,name='businesscategory_search'),
-                  #
+
                   # path('business_subcategory', businesssubcategorycontroller.business_subcategory,name='business_subcategory'),
                   # path('business_subcategory/<businesscategory_id>',businesssubcategorycontroller.fetch_business_subcategory, name='fetch_business_subcategory'),
                   # path('business_subcategory_search', businesssubcategorycontroller.business_subcategory_search,name='business_subcategory_search'),
@@ -55,16 +55,16 @@ urlpatterns = [
                   # path('costdriver', costdrivercontroller.costdriver, name='costdriver'),
                   # path('costdriver/<costdriver_id>', costdrivercontroller.fetch_costdriver, name='fetch_costdriver'),
                   # path('costdriver_search', costdrivercontroller.costdriver_search, name='costdriver_search'),
-                  #
+
                   # path('allocationlevel', allocationlevelcontroller.allocationlevel, name='allocationlevel'),
                   # path('allocationlevel/<allocationlevel_id>', allocationlevelcontroller.fetch_allocationlevel,name='fetch_allocationlevel'),
                   # path('allocationlevel_search', allocationlevelcontroller.allocationlevel_search,name='allocationlevel_search'),
-                  #
+
                   # path('bsccmaping', bsccmapingcontroller.bsccmaping, name='bsccmaping'),
                   # path('bsccmaping/<bsccmaping_id>', bsccmapingcontroller.fetch_bsccmaping, name='fetch_bsccmaping'),
                   # path('bsccmaping_search', bsccmapingcontroller.bsccmaping_search, name='bsccmaping_search'),
                   #
-                  path('allocation', allocationfromcontroller.allocation, name='allocation'),
+                  # path('allocation', allocationfromcontroller.allocation, name='allocation'),
                   # path('allocationmeta', allocMeta.allocationmeta_create, name='allocationmeta'),
                   # path('allocation_fetch/<id>/', allocMeta.allocation_fetch_individual, name='allocation_fetch'),
                   #
@@ -101,15 +101,15 @@ urlpatterns = [
                   #
                   # path('fileupload_acti_clients', nac_income.fileupload_acti_clients, name='document_upload'),
                   path('fileupload_cc_income', nac_income.fileupload_cc_income, name='fileupload_cc_income'),
-                  # path('income_header_fetch', nac_income.income_header_fetch, name='income_header_fetch'),
+                  path('income_header_fetch', nac_income.income_header_fetch, name='income_header_fetch'),
                   # path('income_header_date', nac_income.income_header_date, name='income_header_date'),
                   # path('income_header_amount', nac_income.income_header_amount, name='income_header_amount'),
-                  # path('income_amount_date', nac_income.income_amount_date, name='income_amount_date'),
+                  path('income_amount_date', nac_income.income_amount_date, name='income_amount_date'),
                   # path('ppr_client_list',nac_income.ppractiveclients_list,name='ppr_client_list'),
                   # path('ppr_client_date',nac_income.ppractiveclients_date,name='ppr_client_date'),
-                  # path('asset_class',nac_income.ppr_assetclass,name='asset_class'),
+                  path('asset_class',nac_income.ppr_assetclass,name='asset_class'),
                   # path('get_masterbuisness',nac_income.get_masterbuisness,name='get_masterbuisness'),
-                  # path('ppr_income_filedownload',nac_income.ppr_income_Filedownload,name='ppr_income_filedownload'),
+                  path('ppr_income_filedownload',nac_income.ppr_income_Filedownload,name='ppr_income_filedownload'),
                   path('set_pprsources',nac_income.create_ppr_sources,name='set_pprsources'),
                   path('set_head_groups',nac_income.create_head_groups,name='set_head_groups'),
                   path('set_sub_groups',nac_income.create_sub_groups,name='set_sub_groups'),
@@ -136,21 +136,21 @@ urlpatterns = [
                   path('dss_upload',dss_contoller.dss_upload,name='dss_upload'),
                   path('dssdate_level_list',dss_contoller.ppr_dssdate_level_list,name='dssdate_level_list'),
                   # #New_Allocation
-                  # path('new_allocation_list', allocationlevelcontroller.new_allocation_level_list, name='new_allocation_list'),
+                  path('new_allocation_list', allocationlevelcontroller.new_allocation_level_list, name='new_allocation_list'),
                   # path('new_allocation_pprinsert', allocationlevelcontroller.new_allocation_pprinsert, name='new_allocation_pprinsert'),
                   # path('level_core_get',allocationlevelcontroller.get_core,name='level_core_get'),
                   # path('business_fetch',allocationlevelcontroller.bussiness_data,name='business_fetch'),
-                  # path('bs_fetch',allocationlevelcontroller.bs_data,name='bs_fetch'),
+                  path('bs_fetch',allocationlevelcontroller.bs_data,name='bs_fetch'),
                   # path('cc_fetch',allocationlevelcontroller.cc_data,name='cc_fetch'),
-                  # path('allocation', allocationlevelcontroller.ppr_allocation_create, name='businesscategory'),
-                  # path('allocation/<id>', allocationlevelcontroller.fetch_allocation,name='allocation_fetch'),
-                  # path('allocation_search', allocationlevelcontroller.allcation_search,name='allocation_search'),
-                  # path('implementry_status',allocationlevelcontroller.instatus_edit,name='status'),
-                  # path('fetch_all',allocationlevelcontroller.fetch_all,name='fetch_all'),
-                  # path('total_amount',allocationlevelcontroller.ppr_data,name='total_amount'),
-                  # path('modify_allocation',allocationlevelcontroller.modify_allocation,name='modify'),
+                  path('allocation', allocationlevelcontroller.ppr_allocation_create, name='businesscategory'),
+                  path('allocation/<id>', allocationlevelcontroller.fetch_allocation,name='allocation_fetch'),
+                  path('allocation_search', allocationlevelcontroller.allcation_search,name='allocation_search'),
+                  path('implementry_status',allocationlevelcontroller.instatus_edit,name='status'),
+                  path('fetch_all',allocationlevelcontroller.fetch_all,name='fetch_all'),
+                  path('total_amount',allocationlevelcontroller.ppr_data,name='total_amount'),
+                  path('modify_allocation',allocationlevelcontroller.modify_allocation,name='modify'),
                   # #New_income
-                  # path('new_incomegrp_list', nac_income.new_ppr_incomegrp, name='new_incomegrp_list'),
+                  path('new_incomegrp_list', nac_income.new_ppr_incomegrp, name='new_incomegrp_list'),
                   # path('new_incomehead_list', nac_income.new_ppr_incomehead, name='new_incomehead_list'),
                   # path('new_incomecat_list', nac_income.new_ppr_incomecat, name='new_incomecat_list'),
                   # path('new_incomesubcat_list', nac_income.new_income_subcat, name='new_incomesubcat_list'),
@@ -160,5 +160,6 @@ urlpatterns = [
                   path('modify_glsubgroup_status', nac_income.modify_edit, name='modify_glsubgroup_status'),
                   # #dss_report
                   path('dss_profitorloss_list', dss_contoller.dssdate_profitorloss_list, name='dss_profitorloss_list'),
-                  path('dss_average_list', dss_contoller.ppr_dssdate_average_list, name='dss_average_list')
+                  path('dss_average_list', dss_contoller.ppr_dssdate_average_list, name='dss_average_list'),
+                  path('budget_upload', nac_income.budget_data, name='budget_upload'),
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

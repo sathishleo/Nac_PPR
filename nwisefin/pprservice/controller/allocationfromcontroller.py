@@ -4,31 +4,32 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from utilityservice.data.response.nwisefinpage import NWisefinPage
-from utilityservice.service.nwisefinauthenticate import NWisefinAuthentication
-from utilityservice.service.nwisefinpermission import NWisefinPermission
-from utilityservice.data.response.nwisefinlist import NWisefinList
-from pprservice.data.request.allocationfromrequest import AllocationFromRequest
-from pprservice.service.allocationfromservice import AllocationService
-from userservice.service.employeeservice import EmployeeService
-from masterservice.models import Bank
+# from utilityservice.data.response.nwisefinpage import NWisefinPage
+# from utilityservice.service.nwisefinauthenticate import NWisefinAuthentication
+# from utilityservice.service.nwisefinpermission import NWisefinPermission
+# from utilityservice.data.response.nwisefinlist import NWisefinList
+# from pprservice.data.request.allocationfromrequest import AllocationFromRequest
+# from pprservice.service.allocationfromservice import AllocationService
+# from userservice.service.employeeservice import EmployeeService
+# from masterservice.models import Bank
 
 
+from ppr_middleware.request_middleware import NWisefinAuthentication
 @csrf_exempt
 @api_view(['GET', 'POST'])
 @authentication_classes([NWisefinAuthentication])
-@permission_classes([IsAuthenticated, NWisefinPermission])
+# @permission_classes([IsAuthenticated, NWisefinPermission])
 def allocation(request):
     if request.method == 'POST':
         scope=request.scope
-        allocation_service = AllocationService(scope)
-        allocation_data = json.loads(request.body)
-        allocation_obj = AllocationFromRequest(allocation_data)
-
-        empid = request.employee_id
-        resp_obj = allocation_service.create_allocation(allocation_obj, empid)
-        response = HttpResponse(resp_obj.get(), content_type="application/json")
-        return response
+        # allocation_service = AllocationService(scope)
+        # allocation_data = json.loads(request.body)
+        # allocation_obj = AllocationFromRequest(allocation_data)
+        #
+        # empid = request.employee_id
+        # resp_obj = allocation_service.create_allocation(allocation_obj, empid)
+        # response = HttpResponse(resp_obj.get(), content_type="application/json")
+        # return response
     # elif request.method == 'GET':
     #     return fetch_allocationfrom_list(request)
 

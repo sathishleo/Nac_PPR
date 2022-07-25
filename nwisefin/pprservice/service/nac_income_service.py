@@ -27,9 +27,8 @@ from utilityservice.service.threadlocal import NWisefinThread
 # from utilityservice.service.applicationconstants import ApplicationNamespace
 from pprservice.models.pprmodel import active_clients, clients_details_months, Income_header, Income_details_month, \
     Income_details_date, clients_details_date, GL_Subgroup, Income_overalldata, \
-    Sub_Groups, Head_Groups, Ppr_Sources
-# # from pprservice.util.pprutility import Fees_type, Client_flag, Activestatus, Asset_class,\
-#     # MASTER_SERVICE,USER_SERVICE
+    Sub_Groups, Head_Groups, Ppr_Sources, Budgetdetial
+from pprservice.util.pprutility import Fees_type, Client_flag, Activestatus, Asset_class
 from pprservice.data.response.nac_income_respone import ppr_clientresponse, \
     Income_details_response as Income_details_response, ppr_source_response
 from datetime import datetime
@@ -103,13 +102,13 @@ class Income_Service(NWisefinThread):
         asset_df1 = asset_df.loc[:, ['id', 'code','name']]
         product_df1 = product_df.loc[:, ['id', 'code']]
         biz_df1 = biz_df.loc[:, ['id', 'name']]
-        ci_df1 = ci_df.loc[:, ['id', 'client_code']]
+        ci_df1 = ci_df.loc[:, ['id', 'client_code','cin']]
 
         gldata_type = {"id": int, "gl_no": int}
         branchdata_type = {"id": int, "code": str}
         assetdata_type = {"id": int, "code": str, "name": str}
         productdata_type = {"id": int, "code": str}
-        cidata_type = {"id": int, "client_code": str}
+        cidata_type = {"id": int, "client_code": str,"cin":str}
         biz_type = {"id": int, "name": str}
 
         excel_type = {'Branch code': str, "Product Code": str, "CIN Number": str, "Business type": str}
@@ -134,7 +133,7 @@ class Income_Service(NWisefinThread):
         df3.rename(columns={'id': 'branch_id'}, inplace=True)
         df4 = pd.merge(df3, product_df2, how='left', left_on=['Product Code'], right_on=['code'])
         df4.rename(columns={'id': 'product_id'}, inplace=True)
-        df5 = pd.merge(df4, ci_df2, how='left', left_on=['CIN Number'], right_on=['client_code'])
+        df5 = pd.merge(df4, ci_df2, how='left', left_on=['CIN Number'], right_on=['cin'])
         df5.rename(columns={'id': 'client_id'}, inplace=True)
         df6 = pd.merge(df5, biz_df2, how='left', left_on=['Business type'], right_on=['name'])
         df6.rename(columns={'id': 'biz_id'}, inplace=True)
@@ -382,7 +381,7 @@ class Income_Service(NWisefinThread):
                             interest_amount=data["Int Amount"],
                             created_by=employee_id,
                             created_date=datetime.now(), entity_id=self._entity_id(),
-                            sanctioned_amount=data["Sanctioned_Amount"], sanctioned_date=data["Sanctioned Date"],
+                            sanctioned_amount=data["Sanctioned Amount"], sanctioned_date=data["Sanctioned Date"],
                             opening_pos=data["Opening POS"], closing_pos=data["Closing POS"])
 
                         inc_mon3 = Income_details_month.objects.using(self._current_app_schema()).create(
@@ -576,7 +575,7 @@ class Income_Service(NWisefinThread):
                             interest_amount=data["Int Amount"],
                             created_by=employee_id,
                             created_date=datetime.now(), entity_id=self._entity_id(),
-                            sanctioned_amount=data['sanctioned_amount'],
+                            sanctioned_amount=data["Sanctioned Amount"],
                             opening_pos=data["Opening POS"],
                             closing_pos=data["Closing POS"])
                         inc5 = Income_header.objects.using(self._current_app_schema()).create(
@@ -643,7 +642,7 @@ class Income_Service(NWisefinThread):
                             interest_amount=data["Int Amount"],
                             created_by=employee_id,
                             created_date=datetime.now(), entity_id=self._entity_id(),
-                            sanctioned_amount=data['sanctioned_amount'],
+                            sanctioned_amount=data["Sanctioned Amount"],
                             opening_pos=data["Opening POS"],
                             closing_pos=data["Closing POS"])
 
@@ -658,550 +657,550 @@ class Income_Service(NWisefinThread):
             return error_obj
     #
 #
-#     def income_header_fetch(self,data,employee_id,vys_page):
-#         try:
-#             income_details=Income_details_month.objects.using(self._current_app_schema()).filter(activeclient__assest_class__in=data["assest_class"],month=data["month"],activeclient__product_id=None,activeclient__client_id=None).values("activeclient__assest_class", "activeclient__fee_type").annotate(interest_amount1=Sum("interest_amount"),eir_amount1=Sum("eir_amount"),fee_due1=Sum("fee_due")).values("interest_amount","eir_amount","fee_due","activeclient__fee_type","activeclient__assest_class")[vys_page.get_offset():vys_page.get_query_limit()]
-#
-#             Interest_income=[]
-#             Gurantee_fee=[]
-#             Syndication_fee=[]
-#             Professional_fee=[]
-#             resp_list = NWisefinList()
-#             data1=[]
-#             data2=[]
-#             data3=[]
-#             data4=[]
-#             for i in income_details:
-#
-#                 doc_data = Income_details_response()
-#                 if i["activeclient__fee_type"]==Fees_type.Interest_income:
-#                     interest_amount=float(i["interest_amount"])+float(i["eir_amount"])
-#                     doc_data.set_amount(interest_amount)
-#
-#                     # doc_data.set_fee_type(Fees_type.Interest_income_var)
-#                     # if i.activeclient.flag == Client_flag.OWN:
-#                     #     doc_data.set_flag(Client_flag.OWN_VAL)
-#                     # elif i.activeclient.flag == Client_flag.ENABLED:
-#                     #     doc_data.set_flag(Client_flag.ENABLED_VAL)
-#
-#                     cls = Asset_class()
-#                     doc_data.set_assest_class(cls.getasset(i["activeclient__assest_class"]))
-#                     Interest_income.append(doc_data)
-#                     data1={"name":Fees_type.Interest_income_var,"value":Interest_income}
-#                     # resp_list.append(dict)
-#                     # resp_list.append(data)
-#                 elif i["activeclient__fee_type"]==Fees_type.Gurantee_fee:
-#                     # doc_data.set_fee_type(Fees_type.Gurantee_fee_var)
-#                     doc_data.set_amount(i["fee_due"])
-#
-#                     # if i.activeclient.flag == Client_flag.OWN:
-#                     #     doc_data.set_flag(Client_flag.OWN_VAL)
-#                     # elif i.activeclient.flag == Client_flag.ENABLED:
-#                     #     doc_data.set_flag(Client_flag.ENABLED_VAL)
-#
-#                     cls = Asset_class()
-#                     doc_data.set_assest_class(cls.getasset(i["activeclient__assest_class"]))
-#
-#
-#                     data2 = {"name": Fees_type.Gurantee_fee_var, "value": Gurantee_fee}
-#                     # resp_list.append(dict)
-#                     # resp_list.append(data)
-#                 elif i["activeclient__fee_type"]==Fees_type.Syndication_fee:
-#                     # doc_data.set_fee_type(Fees_type.Syndication_fee_var)
-#                     doc_data.set_amount(i["fee_due"])
-#                     # doc_data = Income_details_response()
-#
-#                     # if i.activeclient.flag == Client_flag.OWN:
-#                     #     doc_data.set_flag(Client_flag.OWN_VAL)
-#                     # elif i.activeclient.flag == Client_flag.ENABLED:
-#                     #     doc_data.set_flag(Client_flag.ENABLED_VAL)
-#
-#                     cls = Asset_class()
-#                     doc_data.set_assest_class(cls.getasset(i["activeclient__assest_class"]))
-#
-#
-#                     Syndication_fee.append(doc_data)
-#
-#                     data3 = {"name": Fees_type.Syndication_fee_var, "value": Syndication_fee}
-#
-#                 elif i["activeclient__fee_type"]==Fees_type.Professional_fee:
-#                     # doc_data.set_fee_type(Fees_type.Professional_fee_var)
-#
-#                     if i.activeclient.flag == Client_flag.OWN:
-#                         doc_data.set_flag(Client_flag.OWN_VAL)
-#                     elif i.activeclient.flag == Client_flag.ENABLED:
-#                         doc_data.set_flag(Client_flag.ENABLED_VAL)
-#                     doc_data.set_amount(i["fee_due"])
-#
-#                     cls = Asset_class()
-#                     doc_data.set_assest_class(cls.getasset(i["activeclient__assest_class"]))
-#
-#
-#
-#                     data4 = {"name": Fees_type.Professional_fee_var, "value": Professional_fee}
-#             if len(data1)!=0:
-#                 resp_list.append(data1)
-#             if len(data2) != 0:
-#                 resp_list.append(data2)
-#             if len(data3)!=0:
-#                 resp_list.append(data3)
-#             if len(data4)!=0:
-#                 resp_list.append(data4)
-#             vpage = NWisefinPaginator(income_details, vys_page.get_index(), 10)
-#             resp_list.set_pagination(vpage)
-#             return resp_list
-#         except Exception as e:
-#             error_obj = NWisefinError()
-#             error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
-#             error_obj.set_description(str(e))
-#             # logger.info('ta_ change_approver- ' + str(e) + str(exc))
-#             return error_obj
-#
-#
-#     def income_amount_date(self,body,employee_id,vys_page):
-#         try:
-#             masterservice = MASTER_SERVICE(self._scope())
-#             condition = Q(date__date__range=(body["fromdate"], body["todate"]))
-#             # if int(body["business_id"]) !=4:
-#             condition&=Q(activeclient__business_id=body["business_id"])
-#             # if "product_id" not in body and "client_id" not in body:
-#             #     condition&=Q(activeclient__product_id=None,activeclient__client_id=None)
-#             if "product_id" not in body:
-#                 if "Rm_id" in body and "client_id" in body and "assest_class" in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     rm.append(body["client_id"])
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm,activeclient__assest_class__in=body["assest_class"])
-#                 elif "Rm_id" in body and "client_id" in body and "assest_class" not in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     rm.append(body["client_id"])
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm)
-#                 elif "Rm_id" in body and "client_id" not in body and "assest_class" in body:
-#                     rm=self.client_get(body["Rm_id"])
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm,activeclient__assest_class__in=body["assest_class"])
-#                 elif "Rm_id" in body and "client_id" not in body and "assest_class" not in body:
-#                     rm=self.client_get(body["Rm_id"])
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm)
-#                 elif "Rm_id" not in body and "client_id" in body and "assest_class" in body:
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id=body["client_id"])
-#                 elif "Rm_id" not in body and "client_id" in body and "assest_class" not  in body:
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id=body["client_id"],activeclient__assest_class__in=body["assest_class"])
-#                 elif "Rm_id" not in body and "client_id" not in body and "assest_class" not  in body:
-#                     # condition &= Q(activeclient__product_id=None, activeclient__client_id=None)
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id=None)
-#                     condition&=~Q(activeclient__assest_class=None)
-#
-#                 elif "Rm_id" not in body and "client_id" not in body and "assest_class" in body:
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id=None,activeclient__assest_class__in=body["assest_class"])
-#
-#
-#             elif "product_id"  in body :
-#                 # if "client_id" in body:
-#                 if "Rm_id" in body and "client_id" in body and "assest_class" in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     rm.append(body["client_id"])
-#                     condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm,
-#                                    activeclient__assest_class__in=body["assest_class"])
-#                 elif "Rm_id" in body and "client_id" in body and "assest_class" not in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     rm.append(body["client_id"])
-#                     condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm)
-#                 elif "Rm_id" in body and "client_id" not in body and "assest_class" in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm,
-#                                    activeclient__assest_class__in=body["assest_class"])
-#                 elif "Rm_id" in body and "client_id" not in body and "assest_class" not in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm)
-#                 elif "Rm_id" not in body and "client_id" in body and "assest_class" in body:
-#                     condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id=body["client_id"])
-#                 elif "Rm_id" not in body and "client_id" in body and "assest_class" not in body:
-#                     condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id=body["client_id"],
-#                                    activeclient__assest_class__in=body["assest_class"])
-#                 elif "Rm_id" not in body and "client_id" not in body and "assest_class" not in body:
-#                     condition &= Q(activeclient__product_id=body["product_id"])
-#                     condition &= ~Q(activeclient__assest_class=None)
-#                 elif "Rm_id" not in body and "client_id" not in body and "assest_class" in body:
-#                     condition &= Q(activeclient__product_id=body["product_id"],
-#                                    activeclient__assest_class__in=body["assest_class"])
-#             # else:
-#             #     condition&=~Q(activeclient__business_id=None)
-#             #     condition&=~Q(activeclient__assest_class=None)
-#             #     condition&=Q(activeclient__client_id=None)
-#
-#             # if "product_id" in body:
-#             #         condition &= Q(activeclient__product_id=body["product_id"])
-#
-#             income_details = Income_details_date.objects.using(self._current_app_schema()).filter(condition
-#                 ).values(
-#                 "activeclient__assest_class","activeclient__flag").annotate(opening_pos1=Sum("opening_pos"),
-#                                                                              closing_pos1=Sum("closing_pos"),
-#                                                                              disbursal_amount1=Sum("disbursal_amount"),
-#                                                                              total_disbursalamount1=Sum(
-#                                                                                  "total_disbursalamount"),sanctioned_amount1=Sum("sanctioned_amount")).values(
-#                 "activeclient__assest_class", "activeclient__flag", "opening_pos1", "total_disbursalamount1",
-#                 "disbursal_amount1", "closing_pos1","sanctioned_amount1")
-#             resp_list = NWisefinList()
-#             assest_class_owned=[]
-#             assest_class_enabled=[]
-#             disbursal_amount_owned=[]
-#             total_disbursalamount_enabled=[]
-#             disbursal_amount_enabled=[]
-#             total_disbursalamount_owned=[]
-#             opening_pos_own=[]
-#             closing_pos_enable=[]
-#             opening_pos_enable= []
-#             closing_pos_own = []
-#             volume_own = []
-#             volume_enable = []
-#             average_enable = []
-#             average_own = []
-#             growth_own = []
-#             growth_enable = []
-#             # volume=0
-#             # opening_pos=0
-#             # closing_pos=0
-#             # disbursal_amount=0
-#             # total_disbursalamount=0
-#             for data in income_details:
-#
-#                 doc_data = Income_details_response()
-#
-#                 # opening_pos =opening_pos+ data["opening_pos1"]
-#                 # closing_pos =closing_pos+ data["closing_pos1"]
-#                 # volume =volume+ data["sanctioned_amount1"]
-#                 # average = (int(opening_pos) + int(closing_pos)) / 2
-#                 # growth = (int(closing_pos) - int(opening_pos))
-#                 #
-#                 # disbursal_amount =disbursal_amount+ data["disbursal_amount1"]
-#                 # total_disbursalamount =total_disbursalamount+ data["total_disbursalamount1"]
-#                 # disbursal_amount_owned.append(disbursal_amount)
-#                 # total_disbursalamount_arr.append(total_disbursalamount)
-#                 # doc_data.set_average(average)
-#                 # doc_data.set_growth(growth)
-#                 # doc_data.set_disbursal_amount(disbursal_amount)
-#                 # doc_data.set_total_disbursalamount(total_disbursalamount)
-#                 # doc_data.set_volume(data["sanctioned_amount1"])
-#                 if data["activeclient__flag"] == Client_flag.OWN:
-#                     doc_data.set_flag(Client_flag.OWN_VAL)
-#                     flag_name=Client_flag.OWN_VAL
-#                     user_dtls = masterservice.get_BS_id([data["activeclient__assest_class"]])
-#                     # ppr_response.set_assest_class(user_dtls[0]["name"])
-#                     # cls = Asset_class()
-#                     # assest = (cls.getasset((data["activeclient__assest_class"])))
-#                     # print(assest.name)
-#                     assest_class_owned.append(user_dtls[0]["name"])
-#                     disbursal_amount = data["disbursal_amount1"]
-#                     total_disbursalamount = data["total_disbursalamount1"]
-#                     opening_pos = data["opening_pos1"]
-#                     closing_pos = data["closing_pos1"]
-#                     volume = data["sanctioned_amount1"]
-#                     average = (float(opening_pos) + float(closing_pos)) / 2
-#                     if (opening_pos) != 0:
-#                         growth = ((float(closing_pos) - float(opening_pos)) / (float(opening_pos))) * 100
-#                     else:
-#                         growth = 0
-#
-#                     disbursal_amount_owned.append(disbursal_amount)
-#                     total_disbursalamount_owned.append(total_disbursalamount)
-#                     opening_pos_own.append(opening_pos)
-#                     closing_pos_own.append(closing_pos)
-#                     volume_own.append(volume)
-#                     average_own.append(average)
-#                     growth_own.append(growth)
-#
-#
-#                 elif data["activeclient__flag"] == Client_flag.ENABLED:
-#                     doc_data.set_flag(Client_flag.ENABLED_VAL)
-#                     flag_name=Client_flag.ENABLED_VAL
-#                     user_dtls = masterservice.get_BS_id([data["activeclient__assest_class"]])
-#                     # ppr_response.set_assest_class(user_dtls[0]["name"])
-#                     # cls = Asset_class()
-#                     # assest = (cls.getasset((data["activeclient__assest_class"])))
-#                     # print(assest.name)
-#                     assest_class_enabled.append(user_dtls[0]["name"])
-#                     # assest_class_owned.append(user_dtls[0]["name"])
-#                     disbursal_amount = data["disbursal_amount1"]
-#                     total_disbursalamount = data["total_disbursalamount1"]
-#
-#                     opening_pos = data["opening_pos1"]
-#                     closing_pos =data["closing_pos1"]
-#                     volume = data["sanctioned_amount1"]
-#                     average = (float(opening_pos) + float(closing_pos)) / 2
-#                     if (opening_pos) !=0:
-#                         growth = ((float(closing_pos) - float(opening_pos)) / (float(opening_pos) ))*100
-#                     else:
-#                         growth=0
-#
-#                     closing_pos_enable.append(closing_pos)
-#                     opening_pos_enable.append(opening_pos)
-#                     disbursal_amount_enabled.append(disbursal_amount)
-#                     total_disbursalamount_enabled.append(total_disbursalamount)
-#                     volume_enable.append(volume)
-#                     average_enable.append(average)
-#                     growth_enable.append(growth)
-#
-#
-#                 cls = Asset_class()
-#                 user_dtls = masterservice.get_BS_id([data["activeclient__assest_class"]])
-#                 doc_data.set_activeclient(user_dtls[0]["id"])
-#                 doc_data.set_opening_pos(opening_pos)
-#                 doc_data.set_closing_pos(closing_pos)
-#                 # resp_list.append(doc_data)
-#                 # arr=["volume","disbursal_amount","Total_disbursal_amount","open","close","average","growth"]
-#                 #
-#                 # for i in range(len(arr)):
-#                 #
-#                 #     if arr[i]=="Total_disbursal_amount":
-#                 #
-#                 #         cls = Client_dtls()
-#                 #         assest=(cls.getasset(data["activeclient__assest_class"]))
-#                 #         data1 = {"name": "Total Disbursal amount -" + flag_name, "value": total_disbursalamount,"assest_class":assest}
-#                 #         # resp_list.append(data1)
-#                 #     if arr[i]=="disbursal_amount":
-#                 #         cls = Client_dtls()
-#                 #         assest = (cls.getasset(data["activeclient__assest_class"]))
-#                 #         data2={"name":"Disbursal Amount -"+flag_name,"value":disbursal_amount,"assest_class":assest}
-#                 #         cls = Client_dtls()
-#                 #         # doc_data.set_activeclient(cls.getasset(data["activeclient__assest_class","assest_class":assest]))
-#                 #         # resp_list.append(data2)
-#                 #     if arr[i]=="volume":
-#                 #         cls = Client_dtls()
-#                 #         assest = (cls.getasset(data["activeclient__assest_class"]))
-#                 #         data3={"name":"Volume -"+flag_name,"value":volume,"assest_class":assest}
-#                 #         cls = Client_dtls()
-#                 #         doc_data.set_activeclient(cls.getasset(data["activeclient__assest_class"]))
-#                 #     if arr[i]=="open":
-#                 #         cls = Client_dtls()
-#                 #         assest = (cls.getasset(data["activeclient__assest_class"]))
-#                 #         data4={"name":"Beginning of period POS  -"+flag_name,"value":opening_pos,"assest_class":assest}
-#                 #         cls = Client_dtls()
-#                 #         doc_data.set_activeclient(cls.getasset(data["activeclient__assest_class"]))
-#                 #     if arr[i]=="close":
-#                 #         cls = Client_dtls()
-#                 #         assest = (cls.getasset(data["activeclient__assest_class"]))
-#                 #         data5={"name":"End of period -"+flag_name,"value":closing_pos,"assest_class":assest}
-#                 #         cls = Client_dtls()
-#                 #         doc_data.set_activeclient(cls.getasset(data["activeclient__assest_class"]))
-#                 #     if arr[i]=="average":
-#                 #         cls = Client_dtls()
-#                 #         assest = (cls.getasset(data["activeclient__assest_class"]))
-#                 #         data6={"name":"Average -"+flag_name,"value":average,"assest_class":assest}
-#                 #         cls = Client_dtls()
-#                 #         doc_data.set_activeclient(cls.getasset(data["activeclient__assest_class"]))
-#                 #     if arr[i]=="growth":
-#                 #         cls = Client_dtls()
-#                 #         assest = (cls.getasset(data["activeclient__assest_class"]))
-#                 #         data7={"name":"Growth -"+flag_name,"value":growth,"assest_class":assest}
-#                 #         cls = Client_dtls()
-#                 #         doc_data.set_activeclient(cls.getasset(data["activeclient__assest_class"]))
-#
-#                 # if len(data1)!=0:
-#                 #     resp_list.append(data1)
-#                 # if len(data2) != 0:
-#                 #     resp_list.append(data2)
-#                 # if len(data3) != 0:
-#                 #     resp_list.append(data3)
-#                 # if len(data4) != 0:
-#                 #     resp_list.append(data4)
-#                 # if len(data5) != 0:
-#                 #     resp_list.append(data5)
-#                 # if len(data6) != 0:
-#                 #     resp_list.append(data6)
-#                 # if len(data7) != 0:
-#                 #     resp_list.append(data7)
-#
-#
-#             # new_data=json.loads(resp_list.get())
-#             # print(new_data)
-#             # client_name=[]
-#             # client_name_enabled=[]
-#             # total_disbursalamount=[]
-#             # disbursal_amount=[]
-#             #
-#             # client_name_enabled=[]
-#             # total_disbursalamount_enabled=[]
-#             # disbursal_amount_enabled=[]
-#             # for new_data1 in new_data["data"]:
-#             #     print(new_data1)
-#             #     if new_data1["activeclient_id"]["name"]==Asset_class.CF_VAL and new_data1["flag"]==Client_flag.OWN_VAL:
-#             #         client_name.append(new_data1["activeclient_id"]["name"])
-#             #         total_disbursalamount.append(new_data1["total_disbursalamount"])
-#             #         disbursal_amount.append(new_data1["disbursal_amount"])
-#             #     elif new_data1["activeclient_id"]["name"]==Asset_class.CF_VAL and new_data1["flag"]==Client_flag.ENABLED_VAL:
-#             #         client_name_enabled.append(new_data1["activeclient_id"]["name"])
-#             #         total_disbursalamount_enabled.append(new_data1["total_disbursalamount"])
-#             #         disbursal_amount_enabled.append(new_data1["disbursal_amount"])
-#             #
-#             #
-#             #     elif new_data1["activeclient_id"]["name"]==Asset_class.MF_VAL and new_data1["flag"]==Client_flag.OWN_VAL:
-#             #         client_name.append(new_data1["activeclient_id"]["name"])
-#             #         total_disbursalamount.append(new_data1["total_disbursalamount"])
-#             #         disbursal_amount.append(new_data1["disbursal_amount"])
-#             #     elif new_data1["activeclient_id"]["name"]==Asset_class.MF_VAL and new_data1["flag"]==Client_flag.ENABLED_VAL:
-#             #         client_name_enabled.append(new_data1["activeclient_id"]["name"])
-#             #         total_disbursalamount_enabled.append(new_data1["total_disbursalamount"])
-#             #         disbursal_amount_enabled.append(new_data1["disbursal_amount"])
-#             #
-#             #     elif new_data1["activeclient_id"]["name"]==Asset_class.AGRI_VAL and new_data1["flag"]==Client_flag.OWN_VAL:
-#             #         client_name.append(new_data1["activeclient_id"]["name"])
-#             #         total_disbursalamount.append(new_data1["total_disbursalamount"])
-#             #         disbursal_amount.append(new_data1["disbursal_amount"])
-#             #     elif new_data1["activeclient_id"]["name"]==Asset_class.AGRI_VAL and new_data1["flag"]==Client_flag.ENABLED_VAL:
-#             #         client_name_enabled.append(new_data1["activeclient_id"]["name"])
-#             #         total_disbursalamount_enabled.append(new_data1["total_disbursalamount"])
-#             #         disbursal_amount_enabled.append(new_data1["disbursal_amount"])
-#             #
-#             #
-#             #     elif  new_data1["activeclient_id"]["name"]==Asset_class.SBL_VAL and new_data1["flag"]==Client_flag.OWN_VAL:
-#             #         client_name.append(new_data1["activeclient_id"]["name"])
-#             #         total_disbursalamount.append(new_data1["total_disbursalamount"])
-#             #         disbursal_amount.append(new_data1["disbursal_amount"])
-#             #     elif  new_data1["activeclient_id"]["name"]==Asset_class.SBL_VAL and new_data1["flag"]==Client_flag.ENABLED_VAL:
-#             #         client_name_enabled.append(new_data1["activeclient_id"]["name"])
-#             #         total_disbursalamount_enabled.append(new_data1["total_disbursalamount"])
-#             #         disbursal_amount_enabled.append(new_data1["disbursal_amount"])
-#
-#             # print("client_name:",client_name)
-#             # print("client_name_enabled:",client_name_enabled)
-#             # print("total_disbursalamount:",total_disbursalamount)
-#             # print("disbursal_amount:",disbursal_amount)
-#             # print("total_disbursalamount_enabled:",total_disbursalamount_enabled)
-#             # print("disbursal_amount_enabled",disbursal_amount_enabled)
-#             # out=[]
-#             # total_disbursalamount1={}
-#             # # total_disbursalamount1_enabled={}
-#             # total_disbursalamount1["name"]="total_disbursalamount_own"
-#             # total_disbursalamount1["Asset_class_value"]=client_name
-#             # total_disbursalamount1["total_disbursalamount"]=total_disbursalamount
-#             # total_disbursalamount1_enabled={}
-#             # total_disbursalamount1_enabled["name"]="total_disbursalamount_enabled"
-#             # total_disbursalamount1_enabled["Asset_class_value"]=client_name
-#             # total_disbursalamount1_enabled["total_disbursalamount"]=total_disbursalamount
-#             # out.append(total_disbursalamount1_enabled)
-#             # out.append(total_disbursalamount1_enabled)
-#             # print(out)
-#             # return out
-#             # if len(data1)!=0:
-#             #     resp_list.append(data1)
-#             # if len(data2) != 0:
-#             #     resp_list.append(data2)
-#             # if len(data3) != 0:
-#             #     resp_list.append(data3)
-#             # print(data10, "ttowned")
-#             # print(data11, "ttenabled")
-#             # print(data12, "dis owned")
-#             # print(data13, "dis enabled")
-#             if len(assest_class_owned)!=len(assest_class_enabled):
-#                 if len(assest_class_owned)>len(assest_class_enabled):
-#                     for i in range(len(assest_class_owned)):
-#                         # if assest_class_owned[i]!=assest_class_enabled[i]:
-#                         # if len(assest_class_enabled)==0:
-#                         #     assest_class_enabled.insert(i,assest_class_owned[i])
-#                         #     disbursal_amount_enabled.insert(i,0)
-#                         #     total_disbursalamount_enabled.insert(i,0)
-#                         #     volume_enable.insert(i,0)
-#                         #     average_enable.insert(i,0)
-#                         #     growth_enable.insert(i,0)
-#                         #     opening_pos_enable.insert(i,0)
-#                         #     closing_pos_enable.insert(i,0)
-#                         #
-#                         # else:
-#                         if assest_class_owned[i] not in assest_class_enabled:
-#                             assest_class_enabled.insert(i, assest_class_owned[i])
-#                             disbursal_amount_enabled.insert(i, 0)
-#                             total_disbursalamount_enabled.insert(i, 0)
-#                             volume_enable.insert(i, 0)
-#                             average_enable.insert(i, 0)
-#                             growth_enable.insert(i, 0)
-#                             opening_pos_enable.insert(i, 0)
-#                             closing_pos_enable.insert(i, 0)
-#                 else:
-#                     for i in range(len(assest_class_enabled)):
-#                         # if assest_class_owned[i]!=assest_class_enabled[i]:
-#                         # if len(assest_class_owned)==0:
-#                         #     assest_class_owned.insert(i,assest_class_enabled[i])
-#                         #     disbursal_amount_owned.insert(i,0)
-#                         #     total_disbursalamount_owned.insert(i,0)
-#                         #     volume_own.insert(i, 0)
-#                         #     average_own.insert(i, 0)
-#                         #     growth_own.insert(i, 0)
-#                         #     opening_pos_own.insert(i, 0)
-#                         #     closing_pos_own.insert(i, 0)
-#                         # else:
-#                         if assest_class_owned[i] not in assest_class_enabled:
-#                             assest_class_owned.insert(i, assest_class_enabled[i])
-#                             disbursal_amount_owned.insert(i, 0)
-#                             total_disbursalamount_owned.insert(i, 0)
-#                             volume_own.insert(i, 0)
-#                             average_own.insert(i, 0)
-#                             growth_own.insert(i, 0)
-#                             opening_pos_own.insert(i, 0)
-#                             closing_pos_own.insert(i, 0)
-#
-#
-#             arr1=["OWN","ENABLED"]
-#             for i in range(len(arr1)):
-#                 if arr1[i]==Client_flag.OWN_VAL:
-#                     dis_own = {"name": "Disbursal Amount OWN (For The Period)", "value": disbursal_amount_owned,
-#                               "assest_class": assest_class_owned}
-#                     tot_Dis_own = {"name": "Total Disbursal Amount OWN" , "value": total_disbursalamount_owned,
-#                               "assest_class": assest_class_owned}
-#                     Opening_own = {"name": "Opening POS OWN" , "value": opening_pos_own,
-#                               "assest_class": assest_class_owned}
-#                     Closing_own={"name": "Closing POS OWN" , "value": closing_pos_own,
-#                               "assest_class": assest_class_owned}
-#                     Average={"name": "Average OWN" , "value": average_own,
-#                               "assest_class": assest_class_owned}
-#                     Volume={"name": "Volume OWN" , "value": volume_own,
-#                               "assest_class": assest_class_owned}
-#                     Growth={"name": "Growth OWN" , "value": growth_own,
-#                               "assest_class": assest_class_owned}
-#                     resp_list.append(Volume)
-#                     resp_list.append(dis_own)
-#                     resp_list.append(tot_Dis_own)
-#                     resp_list.append(Opening_own)
-#                     resp_list.append(Closing_own)
-#                     resp_list.append(Average)
-#                     resp_list.append(Growth)
-#
-#                 elif arr1[i] == Client_flag.ENABLED_VAL:
-#                     dis_enable = {"name": "Disbursal Amount Enabled (For The Period)", "value": disbursal_amount_enabled,
-#                               "assest_class": assest_class_enabled}
-#
-#                     tot_Dis_enable = {"name": "Total Disbursal Amount Enabled" , "value": total_disbursalamount_enabled,
-#                               "assest_class": assest_class_enabled}
-#                     Opening_enable = {"name": "Opening POS Enabled", "value": opening_pos_enable,
-#                                    "assest_class": assest_class_enabled}
-#                     Closing_enable = {"name": "Closing POS Enabled", "value": closing_pos_enable,
-#                                    "assest_class": assest_class_enabled}
-#                     Average_enable = {"name": "Average Enabled", "value": average_enable,
-#                                "assest_class": assest_class_enabled}
-#                     Volume_enable = {"name": "Volume Enabled", "value":volume_enable,
-#                               "assest_class": assest_class_enabled}
-#                     Growth_enable = {"name": "Growth Enabled", "value": growth_enable,
-#                               "assest_class": assest_class_enabled}
-#                     resp_list.append(Volume_enable)
-#                     resp_list.append(dis_enable)
-#                     resp_list.append(tot_Dis_enable)
-#                     resp_list.append(Opening_enable)
-#                     resp_list.append(Closing_enable)
-#                     resp_list.append(Average_enable)
-#                     resp_list.append(Growth_enable)
-#
-#
-#
-#
-#
-#
-#
-#             return resp_list.get()
-#         except Exception as e:
-#             error_obj = NWisefinError()
-#             error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
-#             error_obj.set_description(str(e))
-#             # logger.info('ta_ change_approver- ' + str(e) + str(exc))
-#             return error_obj.get()
-#
+    def income_header_fetch(self,data,employee_id,vys_page):
+        try:
+            income_details=Income_details_month.objects.using(self._current_app_schema()).filter(activeclient__assest_class__in=data["assest_class"],month=data["month"],activeclient__product_id=None,activeclient__client_id=None).values("activeclient__assest_class", "activeclient__fee_type").annotate(interest_amount1=Sum("interest_amount"),eir_amount1=Sum("eir_amount"),fee_due1=Sum("fee_due")).values("interest_amount","eir_amount","fee_due","activeclient__fee_type","activeclient__assest_class")[vys_page.get_offset():vys_page.get_query_limit()]
+
+            Interest_income=[]
+            Gurantee_fee=[]
+            Syndication_fee=[]
+            Professional_fee=[]
+            resp_list = NWisefinList()
+            data1=[]
+            data2=[]
+            data3=[]
+            data4=[]
+            for i in income_details:
+
+                doc_data = Income_details_response()
+                if i["activeclient__fee_type"]==Fees_type.Interest_income:
+                    interest_amount=float(i["interest_amount"])+float(i["eir_amount"])
+                    doc_data.set_amount(interest_amount)
+
+                    # doc_data.set_fee_type(Fees_type.Interest_income_var)
+                    # if i.activeclient.flag == Client_flag.OWN:
+                    #     doc_data.set_flag(Client_flag.OWN_VAL)
+                    # elif i.activeclient.flag == Client_flag.ENABLED:
+                    #     doc_data.set_flag(Client_flag.ENABLED_VAL)
+
+                    cls = Asset_class()
+                    doc_data.set_assest_class(cls.getasset(i["activeclient__assest_class"]))
+                    Interest_income.append(doc_data)
+                    data1={"name":Fees_type.Interest_income_var,"value":Interest_income}
+                    # resp_list.append(dict)
+                    # resp_list.append(data)
+                elif i["activeclient__fee_type"]==Fees_type.Gurantee_fee:
+                    # doc_data.set_fee_type(Fees_type.Gurantee_fee_var)
+                    doc_data.set_amount(i["fee_due"])
+
+                    # if i.activeclient.flag == Client_flag.OWN:
+                    #     doc_data.set_flag(Client_flag.OWN_VAL)
+                    # elif i.activeclient.flag == Client_flag.ENABLED:
+                    #     doc_data.set_flag(Client_flag.ENABLED_VAL)
+
+                    cls = Asset_class()
+                    doc_data.set_assest_class(cls.getasset(i["activeclient__assest_class"]))
+
+
+                    data2 = {"name": Fees_type.Gurantee_fee_var, "value": Gurantee_fee}
+                    # resp_list.append(dict)
+                    # resp_list.append(data)
+                elif i["activeclient__fee_type"]==Fees_type.Syndication_fee:
+                    # doc_data.set_fee_type(Fees_type.Syndication_fee_var)
+                    doc_data.set_amount(i["fee_due"])
+                    # doc_data = Income_details_response()
+
+                    # if i.activeclient.flag == Client_flag.OWN:
+                    #     doc_data.set_flag(Client_flag.OWN_VAL)
+                    # elif i.activeclient.flag == Client_flag.ENABLED:
+                    #     doc_data.set_flag(Client_flag.ENABLED_VAL)
+
+                    cls = Asset_class()
+                    doc_data.set_assest_class(cls.getasset(i["activeclient__assest_class"]))
+
+
+                    Syndication_fee.append(doc_data)
+
+                    data3 = {"name": Fees_type.Syndication_fee_var, "value": Syndication_fee}
+
+                elif i["activeclient__fee_type"]==Fees_type.Professional_fee:
+                    # doc_data.set_fee_type(Fees_type.Professional_fee_var)
+
+                    if i.activeclient.flag == Client_flag.OWN:
+                        doc_data.set_flag(Client_flag.OWN_VAL)
+                    elif i.activeclient.flag == Client_flag.ENABLED:
+                        doc_data.set_flag(Client_flag.ENABLED_VAL)
+                    doc_data.set_amount(i["fee_due"])
+
+                    cls = Asset_class()
+                    doc_data.set_assest_class(cls.getasset(i["activeclient__assest_class"]))
+
+
+
+                    data4 = {"name": Fees_type.Professional_fee_var, "value": Professional_fee}
+            if len(data1)!=0:
+                resp_list.append(data1)
+            if len(data2) != 0:
+                resp_list.append(data2)
+            if len(data3)!=0:
+                resp_list.append(data3)
+            if len(data4)!=0:
+                resp_list.append(data4)
+            vpage = NWisefinPaginator(income_details, vys_page.get_index(), 10)
+            resp_list.set_pagination(vpage)
+            return resp_list
+        except Exception as e:
+            error_obj = NWisefinError()
+            error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
+            error_obj.set_description(str(e))
+            # logger.info('ta_ change_approver- ' + str(e) + str(exc))
+            return error_obj
+
+
+    def income_amount_date(self,request,body,employee_id,vys_page):
+        try:
+            masterservice = Masterservice()
+            condition = Q(date__date__range=(body["fromdate"], body["todate"]))
+            # if int(body["business_id"]) !=4:
+            condition&=Q(activeclient__business_id=body["business_id"])
+            # if "product_id" not in body and "client_id" not in body:
+            #     condition&=Q(activeclient__product_id=None,activeclient__client_id=None)
+            # if "product_id" not in body:
+            #     if "Rm_id" in body and "client_id" in body and "assest_class" in body:
+            #         # rm = self.client_get(body["Rm_id"])
+            #         rm.append(body["client_id"])
+            #         condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm,activeclient__assest_class__in=body["assest_class"])
+            #     elif "Rm_id" in body and "client_id" in body and "assest_class" not in body:
+            #         rm = self.client_get(body["Rm_id"])
+            #         rm.append(body["client_id"])
+            #         condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm)
+            #     elif "Rm_id" in body and "client_id" not in body and "assest_class" in body:
+            #         rm=self.client_get(body["Rm_id"])
+            #         condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm,activeclient__assest_class__in=body["assest_class"])
+            #     elif "Rm_id" in body and "client_id" not in body and "assest_class" not in body:
+            #         rm=self.client_get(body["Rm_id"])
+            #         condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm)
+            #     elif "Rm_id" not in body and "client_id" in body and "assest_class" in body:
+            #         condition &= Q(activeclient__product_id=None, activeclient__client_id=body["client_id"])
+            #     elif "Rm_id" not in body and "client_id" in body and "assest_class" not  in body:
+            #         condition &= Q(activeclient__product_id=None, activeclient__client_id=body["client_id"],activeclient__assest_class__in=body["assest_class"])
+            #     elif "Rm_id" not in body and "client_id" not in body and "assest_class" not  in body:
+            #         # condition &= Q(activeclient__product_id=None, activeclient__client_id=None)
+            #         condition &= Q(activeclient__product_id=None, activeclient__client_id=None)
+            #         condition&=~Q(activeclient__assest_class=None)
+            #
+            #     elif "Rm_id" not in body and "client_id" not in body and "assest_class" in body:
+            #         condition &= Q(activeclient__product_id=None, activeclient__client_id=None,activeclient__assest_class__in=body["assest_class"])
+
+
+            if "product_id"  in body :
+                # if "client_id" in body:
+                if "Rm_id" in body and "client_id" in body and "assest_class" in body:
+                    # rm = self.client_get(body["Rm_id"])
+                    # rm.append(body["client_id"])
+                    condition &= Q(activeclient__product_id=body["product_id"], #activeclient__client_id__in=rm,
+                                   activeclient__assest_class__in=body["assest_class"])
+                elif "Rm_id" in body and "client_id" in body and "assest_class" not in body:
+                    rm = self.client_get(body["Rm_id"])
+                    rm.append(body["client_id"])
+                    condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm)
+                elif "Rm_id" in body and "client_id" not in body and "assest_class" in body:
+                    rm = self.client_get(body["Rm_id"])
+                    condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm,
+                                   activeclient__assest_class__in=body["assest_class"])
+                elif "Rm_id" in body and "client_id" not in body and "assest_class" not in body:
+                    rm = self.client_get(body["Rm_id"])
+                    condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm)
+                elif "Rm_id" not in body and "client_id" in body and "assest_class" in body:
+                    condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id=body["client_id"])
+                elif "Rm_id" not in body and "client_id" in body and "assest_class" not in body:
+                    condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id=body["client_id"],
+                                   activeclient__assest_class__in=body["assest_class"])
+                elif "Rm_id" not in body and "client_id" not in body and "assest_class" not in body:
+                    condition &= Q(activeclient__product_id=body["product_id"])
+                    condition &= ~Q(activeclient__assest_class=None)
+                elif "Rm_id" not in body and "client_id" not in body and "assest_class" in body:
+                    condition &= Q(activeclient__product_id=body["product_id"],
+                                   activeclient__assest_class__in=body["assest_class"])
+            # else:
+            #     condition&=~Q(activeclient__business_id=None)
+            #     condition&=~Q(activeclient__assest_class=None)
+            #     condition&=Q(activeclient__client_id=None)
+
+            # if "product_id" in body:
+            #         condition &= Q(activeclient__product_id=body["product_id"])
+
+            income_details = Income_details_date.objects.using(self._current_app_schema()).filter(condition
+                ).values(
+                "activeclient__assest_class","activeclient__flag").annotate(opening_pos1=Sum("opening_pos"),
+                                                                             closing_pos1=Sum("closing_pos"),
+                                                                             disbursal_amount1=Sum("disbursal_amount"),
+                                                                             total_disbursalamount1=Sum(
+                                                                                 "total_disbursalamount"),sanctioned_amount1=Sum("sanctioned_amount")).values(
+                "activeclient__assest_class", "activeclient__flag", "opening_pos1", "total_disbursalamount1",
+                "disbursal_amount1", "closing_pos1","sanctioned_amount1")
+            resp_list = NWisefinList()
+            assest_class_owned=[]
+            assest_class_enabled=[]
+            disbursal_amount_owned=[]
+            total_disbursalamount_enabled=[]
+            disbursal_amount_enabled=[]
+            total_disbursalamount_owned=[]
+            opening_pos_own=[]
+            closing_pos_enable=[]
+            opening_pos_enable= []
+            closing_pos_own = []
+            volume_own = []
+            volume_enable = []
+            average_enable = []
+            average_own = []
+            growth_own = []
+            growth_enable = []
+            # volume=0
+            # opening_pos=0
+            # closing_pos=0
+            # disbursal_amount=0
+            # total_disbursalamount=0
+            for data in income_details:
+
+                doc_data = Income_details_response()
+
+                # opening_pos =opening_pos+ data["opening_pos1"]
+                # closing_pos =closing_pos+ data["closing_pos1"]
+                # volume =volume+ data["sanctioned_amount1"]
+                # average = (int(opening_pos) + int(closing_pos)) / 2
+                # growth = (int(closing_pos) - int(opening_pos))
+                #
+                # disbursal_amount =disbursal_amount+ data["disbursal_amount1"]
+                # total_disbursalamount =total_disbursalamount+ data["total_disbursalamount1"]
+                # disbursal_amount_owned.append(disbursal_amount)
+                # total_disbursalamount_arr.append(total_disbursalamount)
+                # doc_data.set_average(average)
+                # doc_data.set_growth(growth)
+                # doc_data.set_disbursal_amount(disbursal_amount)
+                # doc_data.set_total_disbursalamount(total_disbursalamount)
+                # doc_data.set_volume(data["sanctioned_amount1"])
+                if data["activeclient__flag"] == Client_flag.OWN:
+                    doc_data.set_flag(Client_flag.OWN_VAL)
+                    flag_name=Client_flag.OWN_VAL
+                    user_dtls = masterservice.get_BS_id(request,[data["activeclient__assest_class"]])
+                    # ppr_response.set_assest_class(user_dtls[0]["name"])
+                    # cls = Asset_class()
+                    # assest = (cls.getasset((data["activeclient__assest_class"])))
+                    # print(assest.name)
+                    assest_class_owned.append(user_dtls[0]["name"])
+                    disbursal_amount = data["disbursal_amount1"]
+                    total_disbursalamount = data["total_disbursalamount1"]
+                    opening_pos = data["opening_pos1"]
+                    closing_pos = data["closing_pos1"]
+                    volume = data["sanctioned_amount1"]
+                    average = (float(opening_pos) + float(closing_pos)) / 2
+                    if (opening_pos) != 0:
+                        growth = ((float(closing_pos) - float(opening_pos)) / (float(opening_pos))) * 100
+                    else:
+                        growth = 0
+
+                    disbursal_amount_owned.append(disbursal_amount)
+                    total_disbursalamount_owned.append(total_disbursalamount)
+                    opening_pos_own.append(opening_pos)
+                    closing_pos_own.append(closing_pos)
+                    volume_own.append(volume)
+                    average_own.append(average)
+                    growth_own.append(growth)
+
+
+                elif data["activeclient__flag"] == Client_flag.ENABLED:
+                    doc_data.set_flag(Client_flag.ENABLED_VAL)
+                    flag_name=Client_flag.ENABLED_VAL
+                    user_dtls = masterservice.get_BS_id(request,[data["activeclient__assest_class"]])
+                    # ppr_response.set_assest_class(user_dtls[0]["name"])
+                    # cls = Asset_class()
+                    # assest = (cls.getasset((data["activeclient__assest_class"])))
+                    # print(assest.name)
+                    assest_class_enabled.append(user_dtls[0]["name"])
+                    # assest_class_owned.append(user_dtls[0]["name"])
+                    disbursal_amount = data["disbursal_amount1"]
+                    total_disbursalamount = data["total_disbursalamount1"]
+
+                    opening_pos = data["opening_pos1"]
+                    closing_pos =data["closing_pos1"]
+                    volume = data["sanctioned_amount1"]
+                    average = (float(opening_pos) + float(closing_pos)) / 2
+                    if (opening_pos) !=0:
+                        growth = ((float(closing_pos) - float(opening_pos)) / (float(opening_pos) ))*100
+                    else:
+                        growth=0
+
+                    closing_pos_enable.append(closing_pos)
+                    opening_pos_enable.append(opening_pos)
+                    disbursal_amount_enabled.append(disbursal_amount)
+                    total_disbursalamount_enabled.append(total_disbursalamount)
+                    volume_enable.append(volume)
+                    average_enable.append(average)
+                    growth_enable.append(growth)
+
+
+                cls = Asset_class()
+                user_dtls = masterservice.get_BS_id([data["activeclient__assest_class"]])
+                doc_data.set_activeclient(user_dtls[0]["id"])
+                doc_data.set_opening_pos(opening_pos)
+                doc_data.set_closing_pos(closing_pos)
+                # resp_list.append(doc_data)
+                # arr=["volume","disbursal_amount","Total_disbursal_amount","open","close","average","growth"]
+                #
+                # for i in range(len(arr)):
+                #
+                #     if arr[i]=="Total_disbursal_amount":
+                #
+                #         cls = Client_dtls()
+                #         assest=(cls.getasset(data["activeclient__assest_class"]))
+                #         data1 = {"name": "Total Disbursal amount -" + flag_name, "value": total_disbursalamount,"assest_class":assest}
+                #         # resp_list.append(data1)
+                #     if arr[i]=="disbursal_amount":
+                #         cls = Client_dtls()
+                #         assest = (cls.getasset(data["activeclient__assest_class"]))
+                #         data2={"name":"Disbursal Amount -"+flag_name,"value":disbursal_amount,"assest_class":assest}
+                #         cls = Client_dtls()
+                #         # doc_data.set_activeclient(cls.getasset(data["activeclient__assest_class","assest_class":assest]))
+                #         # resp_list.append(data2)
+                #     if arr[i]=="volume":
+                #         cls = Client_dtls()
+                #         assest = (cls.getasset(data["activeclient__assest_class"]))
+                #         data3={"name":"Volume -"+flag_name,"value":volume,"assest_class":assest}
+                #         cls = Client_dtls()
+                #         doc_data.set_activeclient(cls.getasset(data["activeclient__assest_class"]))
+                #     if arr[i]=="open":
+                #         cls = Client_dtls()
+                #         assest = (cls.getasset(data["activeclient__assest_class"]))
+                #         data4={"name":"Beginning of period POS  -"+flag_name,"value":opening_pos,"assest_class":assest}
+                #         cls = Client_dtls()
+                #         doc_data.set_activeclient(cls.getasset(data["activeclient__assest_class"]))
+                #     if arr[i]=="close":
+                #         cls = Client_dtls()
+                #         assest = (cls.getasset(data["activeclient__assest_class"]))
+                #         data5={"name":"End of period -"+flag_name,"value":closing_pos,"assest_class":assest}
+                #         cls = Client_dtls()
+                #         doc_data.set_activeclient(cls.getasset(data["activeclient__assest_class"]))
+                #     if arr[i]=="average":
+                #         cls = Client_dtls()
+                #         assest = (cls.getasset(data["activeclient__assest_class"]))
+                #         data6={"name":"Average -"+flag_name,"value":average,"assest_class":assest}
+                #         cls = Client_dtls()
+                #         doc_data.set_activeclient(cls.getasset(data["activeclient__assest_class"]))
+                #     if arr[i]=="growth":
+                #         cls = Client_dtls()
+                #         assest = (cls.getasset(data["activeclient__assest_class"]))
+                #         data7={"name":"Growth -"+flag_name,"value":growth,"assest_class":assest}
+                #         cls = Client_dtls()
+                #         doc_data.set_activeclient(cls.getasset(data["activeclient__assest_class"]))
+
+                # if len(data1)!=0:
+                #     resp_list.append(data1)
+                # if len(data2) != 0:
+                #     resp_list.append(data2)
+                # if len(data3) != 0:
+                #     resp_list.append(data3)
+                # if len(data4) != 0:
+                #     resp_list.append(data4)
+                # if len(data5) != 0:
+                #     resp_list.append(data5)
+                # if len(data6) != 0:
+                #     resp_list.append(data6)
+                # if len(data7) != 0:
+                #     resp_list.append(data7)
+
+
+            # new_data=json.loads(resp_list.get())
+            # print(new_data)
+            # client_name=[]
+            # client_name_enabled=[]
+            # total_disbursalamount=[]
+            # disbursal_amount=[]
+            #
+            # client_name_enabled=[]
+            # total_disbursalamount_enabled=[]
+            # disbursal_amount_enabled=[]
+            # for new_data1 in new_data["data"]:
+            #     print(new_data1)
+            #     if new_data1["activeclient_id"]["name"]==Asset_class.CF_VAL and new_data1["flag"]==Client_flag.OWN_VAL:
+            #         client_name.append(new_data1["activeclient_id"]["name"])
+            #         total_disbursalamount.append(new_data1["total_disbursalamount"])
+            #         disbursal_amount.append(new_data1["disbursal_amount"])
+            #     elif new_data1["activeclient_id"]["name"]==Asset_class.CF_VAL and new_data1["flag"]==Client_flag.ENABLED_VAL:
+            #         client_name_enabled.append(new_data1["activeclient_id"]["name"])
+            #         total_disbursalamount_enabled.append(new_data1["total_disbursalamount"])
+            #         disbursal_amount_enabled.append(new_data1["disbursal_amount"])
+            #
+            #
+            #     elif new_data1["activeclient_id"]["name"]==Asset_class.MF_VAL and new_data1["flag"]==Client_flag.OWN_VAL:
+            #         client_name.append(new_data1["activeclient_id"]["name"])
+            #         total_disbursalamount.append(new_data1["total_disbursalamount"])
+            #         disbursal_amount.append(new_data1["disbursal_amount"])
+            #     elif new_data1["activeclient_id"]["name"]==Asset_class.MF_VAL and new_data1["flag"]==Client_flag.ENABLED_VAL:
+            #         client_name_enabled.append(new_data1["activeclient_id"]["name"])
+            #         total_disbursalamount_enabled.append(new_data1["total_disbursalamount"])
+            #         disbursal_amount_enabled.append(new_data1["disbursal_amount"])
+            #
+            #     elif new_data1["activeclient_id"]["name"]==Asset_class.AGRI_VAL and new_data1["flag"]==Client_flag.OWN_VAL:
+            #         client_name.append(new_data1["activeclient_id"]["name"])
+            #         total_disbursalamount.append(new_data1["total_disbursalamount"])
+            #         disbursal_amount.append(new_data1["disbursal_amount"])
+            #     elif new_data1["activeclient_id"]["name"]==Asset_class.AGRI_VAL and new_data1["flag"]==Client_flag.ENABLED_VAL:
+            #         client_name_enabled.append(new_data1["activeclient_id"]["name"])
+            #         total_disbursalamount_enabled.append(new_data1["total_disbursalamount"])
+            #         disbursal_amount_enabled.append(new_data1["disbursal_amount"])
+            #
+            #
+            #     elif  new_data1["activeclient_id"]["name"]==Asset_class.SBL_VAL and new_data1["flag"]==Client_flag.OWN_VAL:
+            #         client_name.append(new_data1["activeclient_id"]["name"])
+            #         total_disbursalamount.append(new_data1["total_disbursalamount"])
+            #         disbursal_amount.append(new_data1["disbursal_amount"])
+            #     elif  new_data1["activeclient_id"]["name"]==Asset_class.SBL_VAL and new_data1["flag"]==Client_flag.ENABLED_VAL:
+            #         client_name_enabled.append(new_data1["activeclient_id"]["name"])
+            #         total_disbursalamount_enabled.append(new_data1["total_disbursalamount"])
+            #         disbursal_amount_enabled.append(new_data1["disbursal_amount"])
+
+            # print("client_name:",client_name)
+            # print("client_name_enabled:",client_name_enabled)
+            # print("total_disbursalamount:",total_disbursalamount)
+            # print("disbursal_amount:",disbursal_amount)
+            # print("total_disbursalamount_enabled:",total_disbursalamount_enabled)
+            # print("disbursal_amount_enabled",disbursal_amount_enabled)
+            # out=[]
+            # total_disbursalamount1={}
+            # # total_disbursalamount1_enabled={}
+            # total_disbursalamount1["name"]="total_disbursalamount_own"
+            # total_disbursalamount1["Asset_class_value"]=client_name
+            # total_disbursalamount1["total_disbursalamount"]=total_disbursalamount
+            # total_disbursalamount1_enabled={}
+            # total_disbursalamount1_enabled["name"]="total_disbursalamount_enabled"
+            # total_disbursalamount1_enabled["Asset_class_value"]=client_name
+            # total_disbursalamount1_enabled["total_disbursalamount"]=total_disbursalamount
+            # out.append(total_disbursalamount1_enabled)
+            # out.append(total_disbursalamount1_enabled)
+            # print(out)
+            # return out
+            # if len(data1)!=0:
+            #     resp_list.append(data1)
+            # if len(data2) != 0:
+            #     resp_list.append(data2)
+            # if len(data3) != 0:
+            #     resp_list.append(data3)
+            # print(data10, "ttowned")
+            # print(data11, "ttenabled")
+            # print(data12, "dis owned")
+            # print(data13, "dis enabled")
+            if len(assest_class_owned)!=len(assest_class_enabled):
+                if len(assest_class_owned)>len(assest_class_enabled):
+                    for i in range(len(assest_class_owned)):
+                        # if assest_class_owned[i]!=assest_class_enabled[i]:
+                        # if len(assest_class_enabled)==0:
+                        #     assest_class_enabled.insert(i,assest_class_owned[i])
+                        #     disbursal_amount_enabled.insert(i,0)
+                        #     total_disbursalamount_enabled.insert(i,0)
+                        #     volume_enable.insert(i,0)
+                        #     average_enable.insert(i,0)
+                        #     growth_enable.insert(i,0)
+                        #     opening_pos_enable.insert(i,0)
+                        #     closing_pos_enable.insert(i,0)
+                        #
+                        # else:
+                        if assest_class_owned[i] not in assest_class_enabled:
+                            assest_class_enabled.insert(i, assest_class_owned[i])
+                            disbursal_amount_enabled.insert(i, 0)
+                            total_disbursalamount_enabled.insert(i, 0)
+                            volume_enable.insert(i, 0)
+                            average_enable.insert(i, 0)
+                            growth_enable.insert(i, 0)
+                            opening_pos_enable.insert(i, 0)
+                            closing_pos_enable.insert(i, 0)
+                else:
+                    for i in range(len(assest_class_enabled)):
+                        # if assest_class_owned[i]!=assest_class_enabled[i]:
+                        # if len(assest_class_owned)==0:
+                        #     assest_class_owned.insert(i,assest_class_enabled[i])
+                        #     disbursal_amount_owned.insert(i,0)
+                        #     total_disbursalamount_owned.insert(i,0)
+                        #     volume_own.insert(i, 0)
+                        #     average_own.insert(i, 0)
+                        #     growth_own.insert(i, 0)
+                        #     opening_pos_own.insert(i, 0)
+                        #     closing_pos_own.insert(i, 0)
+                        # else:
+                        if assest_class_owned[i] not in assest_class_enabled:
+                            assest_class_owned.insert(i, assest_class_enabled[i])
+                            disbursal_amount_owned.insert(i, 0)
+                            total_disbursalamount_owned.insert(i, 0)
+                            volume_own.insert(i, 0)
+                            average_own.insert(i, 0)
+                            growth_own.insert(i, 0)
+                            opening_pos_own.insert(i, 0)
+                            closing_pos_own.insert(i, 0)
+
+
+            arr1=["OWN","ENABLED"]
+            for i in range(len(arr1)):
+                if arr1[i]==Client_flag.OWN_VAL:
+                    dis_own = {"name": "Disbursal Amount OWN (For The Period)", "value": disbursal_amount_owned,
+                              "assest_class": assest_class_owned}
+                    tot_Dis_own = {"name": "Total Disbursal Amount OWN" , "value": total_disbursalamount_owned,
+                              "assest_class": assest_class_owned}
+                    Opening_own = {"name": "Opening POS OWN" , "value": opening_pos_own,
+                              "assest_class": assest_class_owned}
+                    Closing_own={"name": "Closing POS OWN" , "value": closing_pos_own,
+                              "assest_class": assest_class_owned}
+                    Average={"name": "Average OWN" , "value": average_own,
+                              "assest_class": assest_class_owned}
+                    Volume={"name": "Volume OWN" , "value": volume_own,
+                              "assest_class": assest_class_owned}
+                    Growth={"name": "Growth OWN" , "value": growth_own,
+                              "assest_class": assest_class_owned}
+                    resp_list.append(Volume)
+                    resp_list.append(dis_own)
+                    resp_list.append(tot_Dis_own)
+                    resp_list.append(Opening_own)
+                    resp_list.append(Closing_own)
+                    resp_list.append(Average)
+                    resp_list.append(Growth)
+
+                elif arr1[i] == Client_flag.ENABLED_VAL:
+                    dis_enable = {"name": "Disbursal Amount Enabled (For The Period)", "value": disbursal_amount_enabled,
+                              "assest_class": assest_class_enabled}
+
+                    tot_Dis_enable = {"name": "Total Disbursal Amount Enabled" , "value": total_disbursalamount_enabled,
+                              "assest_class": assest_class_enabled}
+                    Opening_enable = {"name": "Opening POS Enabled", "value": opening_pos_enable,
+                                   "assest_class": assest_class_enabled}
+                    Closing_enable = {"name": "Closing POS Enabled", "value": closing_pos_enable,
+                                   "assest_class": assest_class_enabled}
+                    Average_enable = {"name": "Average Enabled", "value": average_enable,
+                               "assest_class": assest_class_enabled}
+                    Volume_enable = {"name": "Volume Enabled", "value":volume_enable,
+                              "assest_class": assest_class_enabled}
+                    Growth_enable = {"name": "Growth Enabled", "value": growth_enable,
+                              "assest_class": assest_class_enabled}
+                    resp_list.append(Volume_enable)
+                    resp_list.append(dis_enable)
+                    resp_list.append(tot_Dis_enable)
+                    resp_list.append(Opening_enable)
+                    resp_list.append(Closing_enable)
+                    resp_list.append(Average_enable)
+                    resp_list.append(Growth_enable)
+
+
+
+
+
+
+
+            return resp_list.get()
+        except Exception as e:
+            error_obj = NWisefinError()
+            error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
+            error_obj.set_description(str(e))
+            # logger.info('ta_ change_approver- ' + str(e) + str(exc))
+            return error_obj.get()
+
 #
 #     def fetch_ppr_activeclients(self, filter_obj):
 #         pro_list = NWisefinList()
@@ -1709,13 +1708,14 @@ class Income_Service(NWisefinThread):
 #             # logger.info('ta_ change_approver- ' + str(e) + str(exc))
 #             return error_obj.get()
 #
-#     # def client_get(self,Rm_id):
-#     #     from masterservice.models.mastermodels import Nac_Client
-#     #     client_tab=Nac_Client.objects.using(self._current_app_schema()).filter(rm_name=Rm_id)
-#     #     arr=[]
-#     #     for data in client_tab:
-#     #         arr.append(data.id)
-#     #     return arr
+    def client_get(self,Rm_id):
+        a=Rm_id
+        # from masterservice.models.mastermodels import Nac_Client
+        # client_tab=Nac_Client.objects.using(self._current_app_schema()).filter(rm_name=Rm_id)
+        # arr=[]
+        # for data in client_tab:
+        #     arr.append(data.id)
+        # return arr
 #
 #     def active_clients_date(self,len_gth,data,employee_id,active_clie_id):
 #         if len_gth==0:
@@ -2005,137 +2005,137 @@ class Income_Service(NWisefinThread):
 #     #         arr.append(response)
 #     #     return arr
 #
-#     def income_Filedownload(self, data, employee_id, scope, vys_page):
-#         serv = Income_Service(scope)
-#         client_data = serv.ppractiveclients_date(data)
-#         header_data = serv.income_amount_date(data, employee_id, 0)
-#         amount_data = serv.incomeheader_interest_excel(data, employee_id, 0)
-#
-#
-#         exldata1 = json.dumps(client_data, default=lambda o: o.__dict__)
-#         exldata2 = json.dumps(header_data, default=lambda o: o.__dict__)
-#         exldata3 = json.dumps(amount_data, default=lambda o: o.__dict__)
-#         response_data1 = pd.read_json(json.dumps(json.loads(exldata1)['data']))
-#         import numpy as np
-#
-#
-#              # response_data2 = pd.read_json(json.loads(json.loads(exldata2))['data'][0]["assest_class"][i])
-#         response_data3 = pd.read_json(json.dumps(json.loads(exldata3)['data']))
-#         XLSX_FORM = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-#         response = HttpResponse(content_type=XLSX_FORM)
-#         response['Content-Disposition'] = 'attachment; filename="Income_Exception_File.xlsx"'
-#         writer = pd.ExcelWriter(response, engine='xlsxwriter')
-#         size=0
-#         if client_data.data != []:
-#             # final_df1 = response_data1[
-#             #     ['asset_name','bop','new_client','attrition','closing']]
-#             # final_df1.columns = ['Asset Name', 'BOP', 'New Client','Attrition',
-#             #                      'Closing']
-#             asset_class=[]
-#             attrion=[]
-#             bop=[]
-#             new_client=[]
-#             amount=[]
-#             closing=[]
-#
-#             for j in range(len(json.loads(exldata1)["data"])):
-#                 asset_class.append((json.loads(exldata1)["data"])[j]["asset_name"])
-#                 attrion.append((json.loads(exldata1)["data"])[j]["attrition"])
-#                 bop.append((json.loads(exldata1)["data"])[j]["bop"])
-#                 new_client.append((json.loads(exldata1)["data"])[j]["new_client"])
-#                 closing.append((json.loads(exldata1)["data"])[j]["closing"])
-#             response_data1 = np.array([bop,new_client,attrion,closing])
-#             # columns = json.loads(json.loads(exldata2))['data'][0]["assest_class"]
-#             df5 = pd.DataFrame(response_data1, columns=asset_class, index=["BOP","New client","Attrition","Closing"])
-#             df5.to_excel(writer, sheet_name='sheet1', startrow=size)
-#
-#
-#             # final_df1.to_excel(writer, sheet_name='sheet1',startcol=-1)
-#             # workbook = writer.book
-#             # worksheet = writer.sheets['sheet1']
-#             #
-#             # header_format = workbook.add_format({
-#             #     'bold': True,
-#             #     'fg_color': '21CBE5',
-#             #     'border': 1})
-#             # for col_num, value in enumerate(final_df1.columns.values):
-#             #     worksheet.write(0, col_num, value, header_format)
-#             #
-#             #     column_len = final_df1[value].astype(str).str.len().max()
-#             #     column_len = max(column_len, len(value)) + 3
-#             #     worksheet.set_column(col_num, col_num, column_len)
-#             # size = int(len(client_data.data)) + 2
-#         if len(json.loads(json.loads(exldata2))['data']) != 0:
-#             size=0
-#             if int(len(json.loads(json.dumps(json.loads(exldata1)['data']))))!=0:
-#                 size=int(len(json.loads(json.dumps(json.loads(exldata1)['data'])))) + 3
-#             arr = []
-#             arr1 = []
-#             for i in range(len(json.loads(json.loads(exldata2))['data'])):
-#                 value = json.loads(json.loads(exldata2))['data'][i]["value"]
-#                 name = json.loads(json.loads(exldata2))['data'][i]["name"]
-#                 # json.loads(json.loads(exldata2))['data'].insert(1, "Name")
-#                 arr.append(value)
-#                 arr1.append(name)
-#             response_data2 = np.array(arr)
-#             columns = json.loads(json.loads(exldata2))['data'][0]["assest_class"]
-#
-#             df = pd.DataFrame(response_data2, columns=columns, index=arr1)
-#             # df.index.set_names('Courses_Duration', level=0)
-#             # print(df)
-#             # df.rename_axis('Name', inplace=True,axis=0,columns=0)
-#             # df.index.name = 'Index1'
-#             # first_idx = df.index[0]
-#             # last_idx = df.index[-1]
-#
-#             # df.loc[first_idx, ''] = 'Name'
-#             # df.loc[last_idx, 'C'] = 'y'
-#             df.to_excel(writer, sheet_name='sheet1',startrow=size, columns=columns, index=arr1)
-#             # workbook = writer.book
-#             # worksheet = writer.sheets['sheet2']
-#             #
-#             # header_format = workbook.add_format({
-#             #     'bold': True,
-#             #     'fg_color': '21CBE5',
-#             #     'border': 1})
-#             # for col_num, value in enumerate(df.columns.values):
-#             #     worksheet.write(size, col_num, value, header_format)
-#             #
-#             #     column_len = df[value].astype(str).str.len().max()
-#             #     column_len = max(column_len, len(value)) + 3
-#             #     worksheet.set_column(col_num, col_num, column_len)
-#         if amount_data.data != []:
-#             size1=0
-#             if int(len(json.loads(json.loads(exldata2))["data"]))!=0:
-#                 size1 = int(size)+int(len(json.loads(json.loads(exldata2))["data"]))+ 3
-#             else:
-#                 size1 = int(len(json.loads(json.dumps(json.loads(exldata1)['data']))))+3
-#
-#             final_df3 = response_data3[['assest_class', 'fee_type', 'amount']]
-#             final_df3.columns = ["Asset Name", "Income Type", "Amount"]
-#             final_df3.to_excel(writer, index=False, sheet_name='sheet1',startrow=size1, startcol=0)
-#             workbook = writer.book
-#             worksheet = writer.sheets['sheet1']
-#
-#             header_format = workbook.add_format({
-#                 'bold': True,
-#                 'fg_color': '21CBE5',
-#                 'border': 1})
-#             for col_num, value in enumerate(final_df3.columns.values):
-#                 worksheet.write(size1, col_num, value, header_format)
-#
-#                 column_len = final_df3[value].astype(str).str.len().max()
-#                 column_len = max(column_len, len(value)) + 3
-#                 worksheet.set_column(col_num, col_num, column_len)
-#
-#
-#
-#
-#
-#         writer.save()
-#
-#         return HttpResponse(response)
-#
+    def income_Filedownload(self, data, employee_id, scope, vys_page):
+        serv = Income_Service(scope)
+        client_data = serv.ppractiveclients_date(data)
+        header_data = serv.income_amount_date(data, employee_id, 0)
+        amount_data = serv.incomeheader_interest_excel(data, employee_id, 0)
+
+
+        exldata1 = json.dumps(client_data, default=lambda o: o.__dict__)
+        exldata2 = json.dumps(header_data, default=lambda o: o.__dict__)
+        exldata3 = json.dumps(amount_data, default=lambda o: o.__dict__)
+        response_data1 = pd.read_json(json.dumps(json.loads(exldata1)['data']))
+        import numpy as np
+
+
+             # response_data2 = pd.read_json(json.loads(json.loads(exldata2))['data'][0]["assest_class"][i])
+        response_data3 = pd.read_json(json.dumps(json.loads(exldata3)['data']))
+        XLSX_FORM = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        response = HttpResponse(content_type=XLSX_FORM)
+        response['Content-Disposition'] = 'attachment; filename="Income_Exception_File.xlsx"'
+        writer = pd.ExcelWriter(response, engine='xlsxwriter')
+        size=0
+        if client_data.data != []:
+            # final_df1 = response_data1[
+            #     ['asset_name','bop','new_client','attrition','closing']]
+            # final_df1.columns = ['Asset Name', 'BOP', 'New Client','Attrition',
+            #                      'Closing']
+            asset_class=[]
+            attrion=[]
+            bop=[]
+            new_client=[]
+            amount=[]
+            closing=[]
+
+            for j in range(len(json.loads(exldata1)["data"])):
+                asset_class.append((json.loads(exldata1)["data"])[j]["asset_name"])
+                attrion.append((json.loads(exldata1)["data"])[j]["attrition"])
+                bop.append((json.loads(exldata1)["data"])[j]["bop"])
+                new_client.append((json.loads(exldata1)["data"])[j]["new_client"])
+                closing.append((json.loads(exldata1)["data"])[j]["closing"])
+            response_data1 = np.array([bop,new_client,attrion,closing])
+            # columns = json.loads(json.loads(exldata2))['data'][0]["assest_class"]
+            df5 = pd.DataFrame(response_data1, columns=asset_class, index=["BOP","New client","Attrition","Closing"])
+            df5.to_excel(writer, sheet_name='sheet1', startrow=size)
+
+
+            # final_df1.to_excel(writer, sheet_name='sheet1',startcol=-1)
+            # workbook = writer.book
+            # worksheet = writer.sheets['sheet1']
+            #
+            # header_format = workbook.add_format({
+            #     'bold': True,
+            #     'fg_color': '21CBE5',
+            #     'border': 1})
+            # for col_num, value in enumerate(final_df1.columns.values):
+            #     worksheet.write(0, col_num, value, header_format)
+            #
+            #     column_len = final_df1[value].astype(str).str.len().max()
+            #     column_len = max(column_len, len(value)) + 3
+            #     worksheet.set_column(col_num, col_num, column_len)
+            # size = int(len(client_data.data)) + 2
+        if len(json.loads(json.loads(exldata2))['data']) != 0:
+            size=0
+            if int(len(json.loads(json.dumps(json.loads(exldata1)['data']))))!=0:
+                size=int(len(json.loads(json.dumps(json.loads(exldata1)['data'])))) + 3
+            arr = []
+            arr1 = []
+            for i in range(len(json.loads(json.loads(exldata2))['data'])):
+                value = json.loads(json.loads(exldata2))['data'][i]["value"]
+                name = json.loads(json.loads(exldata2))['data'][i]["name"]
+                # json.loads(json.loads(exldata2))['data'].insert(1, "Name")
+                arr.append(value)
+                arr1.append(name)
+            response_data2 = np.array(arr)
+            columns = json.loads(json.loads(exldata2))['data'][0]["assest_class"]
+
+            df = pd.DataFrame(response_data2, columns=columns, index=arr1)
+            # df.index.set_names('Courses_Duration', level=0)
+            # print(df)
+            # df.rename_axis('Name', inplace=True,axis=0,columns=0)
+            # df.index.name = 'Index1'
+            # first_idx = df.index[0]
+            # last_idx = df.index[-1]
+
+            # df.loc[first_idx, ''] = 'Name'
+            # df.loc[last_idx, 'C'] = 'y'
+            df.to_excel(writer, sheet_name='sheet1',startrow=size, columns=columns, index=arr1)
+            # workbook = writer.book
+            # worksheet = writer.sheets['sheet2']
+            #
+            # header_format = workbook.add_format({
+            #     'bold': True,
+            #     'fg_color': '21CBE5',
+            #     'border': 1})
+            # for col_num, value in enumerate(df.columns.values):
+            #     worksheet.write(size, col_num, value, header_format)
+            #
+            #     column_len = df[value].astype(str).str.len().max()
+            #     column_len = max(column_len, len(value)) + 3
+            #     worksheet.set_column(col_num, col_num, column_len)
+        if amount_data.data != []:
+            size1=0
+            if int(len(json.loads(json.loads(exldata2))["data"]))!=0:
+                size1 = int(size)+int(len(json.loads(json.loads(exldata2))["data"]))+ 3
+            else:
+                size1 = int(len(json.loads(json.dumps(json.loads(exldata1)['data']))))+3
+
+            final_df3 = response_data3[['assest_class', 'fee_type', 'amount']]
+            final_df3.columns = ["Asset Name", "Income Type", "Amount"]
+            final_df3.to_excel(writer, index=False, sheet_name='sheet1',startrow=size1, startcol=0)
+            workbook = writer.book
+            worksheet = writer.sheets['sheet1']
+
+            header_format = workbook.add_format({
+                'bold': True,
+                'fg_color': '21CBE5',
+                'border': 1})
+            for col_num, value in enumerate(final_df3.columns.values):
+                worksheet.write(size1, col_num, value, header_format)
+
+                column_len = final_df3[value].astype(str).str.len().max()
+                column_len = max(column_len, len(value)) + 3
+                worksheet.set_column(col_num, col_num, column_len)
+
+
+
+
+
+        writer.save()
+
+        return HttpResponse(response)
+
 #     def incomeheader_amt_excel(self, body, employee_id, vys_page):
 #         condition = Q(date__date__range=(body["fromdate"], body["todate"]),
 #                       activeclient__business_id=body["business_id"])
@@ -2298,207 +2298,184 @@ class Income_Service(NWisefinThread):
 #             arr.append(doc_data)
 #         return arr
 #
-#     def incomeheader_interest_excel(self, body, employee_id, vys_page):
-#         condition = Q(date__date__range=(body["fromdate"], body["todate"]))
-#         if int(body["business_id"]) != 4:
-#             condition&=Q(activeclient__business_id=body["business_id"])
-#             if "product_id" not in body:
-#                 if "Rm_id" in body and "client_id" in body and "assest_class" in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     rm.append(body["client_id"])
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm,
-#                                    activeclient__assest_class__in=body["assest_class"])
-#                 elif "Rm_id" in body and "client_id" in body and "assest_class" not in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     rm.append(body["client_id"])
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm)
-#                 elif "Rm_id" in body and "client_id" not in body and "assest_class" in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm,
-#                                    activeclient__assest_class__in=body["assest_class"])
-#                 elif "Rm_id" in body and "client_id" not in body and "assest_class" not in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm)
-#                 elif "Rm_id" not in body and "client_id" in body and "assest_class" in body:
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id=body["client_id"])
-#                 elif "Rm_id" not in body and "client_id" in body and "assest_class" not in body:
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id=body["client_id"],
-#                                    activeclient__assest_class__in=body["assest_class"])
-#                 elif "Rm_id" not in body and "client_id" not in body and "assest_class" not in body:
-#                     # condition &= Q(activeclient__product_id=None, activeclient__client_id=None)
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id=None)
-#                     condition &= ~Q(activeclient__assest_class=None)
-#
-#                 elif "Rm_id" not in body and "client_id" not in body and "assest_class" in body:
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id=None,
-#                                    activeclient__assest_class__in=body["assest_class"])
-#
-#
-#             elif "product_id" in body:
-#                 # if "client_id" in body:
-#                 if "Rm_id" in body and "client_id" in body and "assest_class" in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     rm.append(body["client_id"])
-#                     condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm,
-#                                    activeclient__assest_class__in=body["assest_class"])
-#                 elif "Rm_id" in body and "client_id" in body and "assest_class" not in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     rm.append(body["client_id"])
-#                     condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm)
-#                 elif "Rm_id" in body and "client_id" not in body and "assest_class" in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm,
-#                                    activeclient__assest_class__in=body["assest_class"])
-#                 elif "Rm_id" in body and "client_id" not in body and "assest_class" not in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm)
-#                 elif "Rm_id" not in body and "client_id" in body and "assest_class" in body:
-#                     condition &= Q(activeclient__product_id=body["product_id"],
-#                                    activeclient__client_id=body["client_id"])
-#                 elif "Rm_id" not in body and "client_id" in body and "assest_class" not in body:
-#                     condition &= Q(activeclient__product_id=body["product_id"],
-#                                    activeclient__client_id=body["client_id"],
-#                                    activeclient__assest_class__in=body["assest_class"])
-#                 elif "Rm_id" not in body and "client_id" not in body and "assest_class" not in body:
-#                     condition &= Q(activeclient__product_id=body["product_id"])
-#                 elif "Rm_id" not in body and "client_id" not in body and "assest_class" in body:
-#                     condition &= Q(activeclient__product_id=body["product_id"],
-#                                    activeclient__assest_class__in=body["assest_class"])
-#
-#
-#         else:
-#             condition &= ~Q(activeclient__business_id=None)
-#             condition &= ~Q(activeclient__assest_class=None)
-#             condition &= Q(activeclient__client_id=None)
-#         income_details = Income_details_date.objects.using(self._current_app_schema()).filter(condition).values(
-#             "activeclient__assest_class", "activeclient__fee_type").annotate(interest_amount1=Sum("interest_amount"),
-#                                                                              eir_amount1=Sum("eir_amount"),
-#                                                                              fee_due1=Sum("fee_due")).values(
-#             "interest_amount1", "eir_amount1", "fee_due1", "activeclient__fee_type", "activeclient__assest_class")
-#
-#         arr = NWisefinList()
-#         for i in income_details:
-#             doc_data = Income_details_response()
-#             if i["activeclient__fee_type"] == Fees_type.Interest_income:
-#                 interest_amount = float(i["interest_amount1"]) + float(i["eir_amount1"])
-#                 interest_amount = interest_amount / 10000000
-#                 interest_amount = round(interest_amount, 2)
-#                 doc_data.set_amount(interest_amount)
-#                 cls = Asset_class()
-#                 asset_name = (cls.getasset(i["activeclient__assest_class"])).name
-#                 doc_data.set_assest_class(asset_name)
-#                 doc_data.set_fee_type(Fees_type.Interest_income_var)
-#             elif i["activeclient__fee_type"] == Fees_type.Gurantee_fee:
-#                 interest_amount = float(i["interest_amount1"]) + float(i["eir_amount1"])
-#                 interest_amount = interest_amount / 10000000
-#                 interest_amount=round(interest_amount,2)
-#                 doc_data.set_amount(interest_amount)
-#                 cls = Asset_class()
-#                 asset_name = (cls.getasset(i["activeclient__assest_class"])).name
-#                 doc_data.set_assest_class(asset_name)
-#                 doc_data.set_fee_type(Fees_type.Gurantee_fee_var)
-#
-#             elif i["activeclient__fee_type"] == Fees_type.Professional_fee:
-#                 interest_amount = float(i["interest_amount1"]) + float(i["eir_amount1"])
-#                 interest_amount = interest_amount / 10000000
-#                 interest_amount = round(interest_amount, 2)
-#                 doc_data.set_amount(interest_amount)
-#                 cls = Asset_class()
-#                 asset_name = (cls.getasset(i["activeclient__assest_class"])).name
-#                 doc_data.set_assest_class(asset_name)
-#                 doc_data.set_fee_type(Fees_type.Professional_fee_var)
-#             elif i["activeclient__fee_type"] == Fees_type.Syndication_fee:
-#                 interest_amount = float(i["interest_amount1"]) + float(i["eir_amount1"])
-#                 interest_amount=interest_amount/10000000
-#                 interest_amount = round(interest_amount, 2)
-#                 doc_data.set_amount(interest_amount)
-#                 cls = Asset_class()
-#                 asset_name = (cls.getasset(i["activeclient__assest_class"])).name
-#                 doc_data.set_assest_class(asset_name)
-#                 doc_data.set_fee_type(Fees_type.Syndication_fee_var)
-#             elif i["activeclient__fee_type"] == Fees_type.Preclosure_fee:
-#                 interest_amount = float(i["interest_amount1"]) + float(i["eir_amount1"])
-#                 interest_amount=interest_amount/10000000
-#                 interest_amount = round(interest_amount, 2)
-#                 doc_data.set_amount(interest_amount)
-#                 cls = Asset_class()
-#                 asset_name = (cls.getasset(i["activeclient__assest_class"])).name
-#                 doc_data.set_assest_class(asset_name)
-#                 doc_data.set_fee_type(Fees_type.Preclosure_fee_var)
-#             elif i["activeclient__fee_type"] == Fees_type.Processing_fee:
-#                 interest_amount = float(i["interest_amount1"]) + float(i["eir_amount1"])
-#                 interest_amount=interest_amount/10000000
-#                 interest_amount = round(interest_amount, 2)
-#                 doc_data.set_amount(interest_amount)
-#                 cls = Asset_class()
-#                 asset_name = (cls.getasset(i["activeclient__assest_class"])).name
-#                 doc_data.set_assest_class(asset_name)
-#                 doc_data.set_fee_type(Fees_type.Processing_fee_var)
-#
-#             arr.append(doc_data)
-#         return arr
-#
-#     def ppractiveclients_date_excel(self, body):
-#         pro_list = NWisefinList()
-#         pprutility = Asset_class()
-#         if "assest_class" in body:
-#             condition = Q(activeclient__asset_id__in=body["assest_class"],
-#                           date__date__range=(body["fromdate"], body["todate"]))
-#             # if "product_id" not in body and "client_id" not in body:
-#             #     condition&=Q(activeclient__product_id=None,activeclient__client_id=None)
-#             if "product_id" not in body:
-#                 if "Rm_id" in body and "client_id" in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     rm.append(body["client_id"])
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm)
-#                 elif "Rm_id" in body and "client_id" not in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm)
-#                 elif "Rm_id" not in body and "client_id" in body:
-#                     condition &= Q(activeclient__product_id=None, activeclient__client_id=body["client_id"])
-#                 # else:
-#                     # condition &= Q(activeclient__product_id=None, activeclient__client_id=None)
-#
-#
-#             elif "product_id" in body:
-#                 # if "client_id" in body:
-#                 if "Rm_id" in body and "client_id" in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     rm.append(body["client_id"])
-#                     condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm)
-#                 elif "Rm_id" in body and "client_id" not in body:
-#                     rm = self.client_get(body["Rm_id"])
-#                     condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm)
-#                 elif "Rm_id" not in body and "client_id" in body:
-#                     condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id=body["client_id"])
-#                     # condition &= Q(activeclient__product_id=body["product_id"],activeclient__client_id=body["client_id"])
-#                 else:
-#                     condition &= Q(activeclient__product_id=body["product_id"])
-#         else:
-#             condition = Q(date__date__range=(body["fromdate"], body["todate"]))
-#
-#         get_clients = clients_details_date.objects.using(self._current_app_schema()).filter(condition).values(
-#             "status", "activeclient__asset_id", "amount").annotate(bop1=Sum('bop'),
-#                                                                             new_client1=Sum('new_client'),
-#                                                                             attrition1=Sum('attrition'),
-#                                                                             closing1=Sum('closing'))
-#         for i in get_clients:
-#             fetch_data = ppr_clientresponse()
-#             asset_var = pprutility.getasset(int(i["activeclient__asset_id"]))
-#             fetch_data.set_asset_id(asset_var.id)
-#             fetch_data.set_asset_name(asset_var.name)
-#             # fetch_data.set_month(i["month"])
-#             fetch_data.set_attrition(i["attrition1"])
-#             fetch_data.set_bop(i["bop1"])
-#             fetch_data.set_new_client(i["new_client1"])
-#             amount=i["amount"]/10000000
-#             amount=round(amount,2)
-#             fetch_data.set_amount(amount)
-#             fetch_data.set_closing(i["closing1"])
-#             fetch_data.set_status(i["status"])
-#             pro_list.append(fetch_data)
-#         return pro_list
-#
+    def incomeheader_interest_excel(self, body, employee_id, vys_page):
+        condition = Q(date__date__range=(body["fromdate"], body["todate"]))
+        if int(body["business_id"]) != 4:
+            condition&=Q(activeclient__business_id=body["business_id"])
+            if "product_id" not in body:
+                if "Rm_id" in body and "client_id" in body and "assest_class" in body:
+                    rm = self.client_get(body["Rm_id"])
+                    rm.append(body["client_id"])
+                    condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm,
+                                   activeclient__assest_class__in=body["assest_class"])
+                elif "Rm_id" in body and "client_id" in body and "assest_class" not in body:
+                    rm = self.client_get(body["Rm_id"])
+                    rm.append(body["client_id"])
+                    condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm)
+                elif "Rm_id" in body and "client_id" not in body and "assest_class" in body:
+                    rm = self.client_get(body["Rm_id"])
+                    condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm,
+                                   activeclient__assest_class__in=body["assest_class"])
+                elif "Rm_id" in body and "client_id" not in body and "assest_class" not in body:
+                    rm = self.client_get(body["Rm_id"])
+                    condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm)
+                elif "Rm_id" not in body and "client_id" in body and "assest_class" in body:
+                    condition &= Q(activeclient__product_id=None, activeclient__client_id=body["client_id"])
+                elif "Rm_id" not in body and "client_id" in body and "assest_class" not in body:
+                    condition &= Q(activeclient__product_id=None, activeclient__client_id=body["client_id"],
+                                   activeclient__assest_class__in=body["assest_class"])
+                elif "Rm_id" not in body and "client_id" not in body and "assest_class" not in body:
+                    # condition &= Q(activeclient__product_id=None, activeclient__client_id=None)
+                    condition &= Q(activeclient__product_id=None, activeclient__client_id=None)
+                    condition &= ~Q(activeclient__assest_class=None)
+
+                elif "Rm_id" not in body and "client_id" not in body and "assest_class" in body:
+                    condition &= Q(activeclient__product_id=None, activeclient__client_id=None,
+                                   activeclient__assest_class__in=body["assest_class"])
+
+
+            elif "product_id" in body:
+                # if "client_id" in body:
+                if "Rm_id" in body and "client_id" in body and "assest_class" in body:
+                    rm = self.client_get(body["Rm_id"])
+                    rm.append(body["client_id"])
+                    condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm,
+                                   activeclient__assest_class__in=body["assest_class"])
+                elif "Rm_id" in body and "client_id" in body and "assest_class" not in body:
+                    rm = self.client_get(body["Rm_id"])
+                    rm.append(body["client_id"])
+                    condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm)
+                elif "Rm_id" in body and "client_id" not in body and "assest_class" in body:
+                    rm = self.client_get(body["Rm_id"])
+                    condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm,
+                                   activeclient__assest_class__in=body["assest_class"])
+                elif "Rm_id" in body and "client_id" not in body and "assest_class" not in body:
+                    rm = self.client_get(body["Rm_id"])
+                    condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm)
+                elif "Rm_id" not in body and "client_id" in body and "assest_class" in body:
+                    condition &= Q(activeclient__product_id=body["product_id"],
+                                   activeclient__client_id=body["client_id"])
+                elif "Rm_id" not in body and "client_id" in body and "assest_class" not in body:
+                    condition &= Q(activeclient__product_id=body["product_id"],
+                                   activeclient__client_id=body["client_id"],
+                                   activeclient__assest_class__in=body["assest_class"])
+                elif "Rm_id" not in body and "client_id" not in body and "assest_class" not in body:
+                    condition &= Q(activeclient__product_id=body["product_id"])
+                elif "Rm_id" not in body and "client_id" not in body and "assest_class" in body:
+                    condition &= Q(activeclient__product_id=body["product_id"],
+                                   activeclient__assest_class__in=body["assest_class"])
+
+
+        else:
+            condition &= ~Q(activeclient__business_id=None)
+            condition &= ~Q(activeclient__assest_class=None)
+            condition &= Q(activeclient__client_id=None)
+        income_details = Income_details_date.objects.using(self._current_app_schema()).filter(condition).values(
+            "activeclient__assest_class", "activeclient__fee_type").annotate(interest_amount1=Sum("interest_amount"),
+                                                                             eir_amount1=Sum("eir_amount"),
+                                                                             fee_due1=Sum("fee_due")).values(
+            "interest_amount1", "eir_amount1", "fee_due1", "activeclient__fee_type", "activeclient__assest_class")
+
+        arr = NWisefinList()
+        for i in income_details:
+            doc_data = Income_details_response()
+            if i["activeclient__fee_type"] == Fees_type.Interest_income:
+                interest_amount = float(i["interest_amount1"]) + float(i["eir_amount1"])
+                interest_amount = interest_amount / 10000000
+                interest_amount = round(interest_amount, 2)
+                doc_data.set_amount(interest_amount)
+                cls = Asset_class()
+                asset_name = (cls.getasset(i["activeclient__assest_class"])).name
+                doc_data.set_assest_class(asset_name)
+                doc_data.set_fee_type(Fees_type.Interest_income_var)
+            elif i["activeclient__fee_type"] == Fees_type.Gurantee_fee:
+                interest_amount = float(i["interest_amount1"]) + float(i["eir_amount1"])
+                interest_amount = interest_amount / 10000000
+                interest_amount=round(interest_amount,2)
+                doc_data.set_amount(interest_amount)
+                cls = Asset_class()
+                asset_name = (cls.getasset(i["activeclient__assest_class"])).name
+                doc_data.set_assest_class(asset_name)
+                doc_data.set_fee_type(Fees_type.Gurantee_fee_var)
+
+            elif i["activeclient__fee_type"] == Fees_type.Professional_fee:
+                interest_amount = float(i["interest_amount1"]) + float(i["eir_amount1"])
+                interest_amount = interest_amount / 10000000
+                interest_amount = round(interest_amount, 2)
+                doc_data.set_amount(interest_amount)
+                cls = Asset_class()
+                asset_name = (cls.getasset(i["activeclient__assest_class"])).name
+                doc_data.set_assest_class(asset_name)
+                doc_data.set_fee_type(Fees_type.Professional_fee_var)
+            elif i["activeclient__fee_type"] == Fees_type.Syndication_fee:
+                interest_amount = float(i["interest_amount1"]) + float(i["eir_amount1"])
+                interest_amount=interest_amount/10000000
+                interest_amount = round(interest_amount, 2)
+                doc_data.set_amount(interest_amount)
+                cls = Asset_class()
+                asset_name = (cls.getasset(i["activeclient__assest_class"])).name
+                doc_data.set_assest_class(asset_name)
+                doc_data.set_fee_type(Fees_type.Syndication_fee_var)
+            elif i["activeclient__fee_type"] == Fees_type.Preclosure_fee:
+                interest_amount = float(i["interest_amount1"]) + float(i["eir_amount1"])
+                interest_amount=interest_amount/10000000
+                interest_amount = round(interest_amount, 2)
+                doc_data.set_amount(interest_amount)
+                cls = Asset_class()
+                asset_name = (cls.getasset(i["activeclient__assest_class"])).name
+                doc_data.set_assest_class(asset_name)
+                doc_data.set_fee_type(Fees_type.Preclosure_fee_var)
+            elif i["activeclient__fee_type"] == Fees_type.Processing_fee:
+                interest_amount = float(i["interest_amount1"]) + float(i["eir_amount1"])
+                interest_amount=interest_amount/10000000
+                interest_amount = round(interest_amount, 2)
+                doc_data.set_amount(interest_amount)
+                cls = Asset_class()
+                asset_name = (cls.getasset(i["activeclient__assest_class"])).name
+                doc_data.set_assest_class(asset_name)
+                doc_data.set_fee_type(Fees_type.Processing_fee_var)
+
+            arr.append(doc_data)
+        return arr
+
+    def ppractiveclients_date_excel(self, body):
+        pro_list = NWisefinList()
+        pprutility = Asset_class()
+        if "assest_class" in body:
+            condition = Q(activeclient__asset_id__in=body["assest_class"],
+                          date__date__range=(body["fromdate"], body["todate"]))
+            # if "product_id" not in body and "client_id" not in body:
+            #     condition&=Q(activeclient__product_id=None,activeclient__client_id=None)
+            if "product_id" not in body:
+                if "Rm_id" in body and "client_id" in body:
+                    rm = self.client_get(body["Rm_id"])
+                    rm.append(body["client_id"])
+                    condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm)
+                elif "Rm_id" in body and "client_id" not in body:
+                    rm = self.client_get(body["Rm_id"])
+                    condition &= Q(activeclient__product_id=None, activeclient__client_id__in=rm)
+                elif "Rm_id" not in body and "client_id" in body:
+                    condition &= Q(activeclient__product_id=None, activeclient__client_id=body["client_id"])
+                # else:
+                    # condition &= Q(activeclient__product_id=None, activeclient__client_id=None)
+
+
+            elif "product_id" in body:
+                # if "client_id" in body:
+                if "Rm_id" in body and "client_id" in body:
+                    rm = self.client_get(body["Rm_id"])
+                    rm.append(body["client_id"])
+                    condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm)
+                elif "Rm_id" in body and "client_id" not in body:
+                    rm = self.client_get(body["Rm_id"])
+                    condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id__in=rm)
+                elif "Rm_id" not in body and "client_id" in body:
+                    condition &= Q(activeclient__product_id=body["product_id"], activeclient__client_id=body["client_id"])
+                    # condition &= Q(activeclient__product_id=body["product_id"],activeclient__client_id=body["client_id"])
+                else:
+                    condition &= Q(activeclient__product_id=body["product_id"])
+        else:
+            condition = Q(date__date__range=(body["fromdate"], body["todate"]))
 
         get_clients = clients_details_date.objects.using(self._current_app_schema()).filter(condition).values(
             "status", "activeclient__asset_id", "amount").annotate(bop1=Sum('bop'),
@@ -2521,6 +2498,8 @@ class Income_Service(NWisefinThread):
             fetch_data.set_status(i["status"])
             pro_list.append(fetch_data)
         return pro_list
+
+
 
     def insert_ppr_sources(self, ppr_obj, emp_id):
         ppr_response = ppr_source_response()
@@ -3307,63 +3286,65 @@ class Income_Service(NWisefinThread):
 #             prolist.append(data)
 #         return prolist
 #
-#     # def new_ppr_incomegrp_logic(self,filter_obj):
-#     #     masterservice=MASTER_SERVICE(self._scope())
-#     #     # user_service = USER_SERVICE(self._scope())
-#     #     condition = Q(status=1)
-#     #     if filter_obj.get_from_date() != None and filter_obj.get_from_date() != "" and filter_obj.get_to_date() != None and filter_obj.get_to_date() != "":
-#     #         condition &= Q(updated_date__range=[filter_obj.get_from_date(),filter_obj.get_to_date()])
-#     #     # if filter_obj.get_business_id() != 4:
-#     #     if filter_obj.get_asset_id() != None and filter_obj.get_asset_id() != "" and len(filter_obj.get_asset_id()) != 0:
-#     #         condition &= Q(assest_class__in=filter_obj.get_asset_id())
-#     #     # else:
-#     #     #     condition &= ~Q(assest_class=None)
-#     #     if filter_obj.get_Rm_id() != None and filter_obj.get_Rm_id() != "":
-#     #         rm = self.client_get(filter_obj.get_Rm_id())
-#     #         rm.append(filter_obj.get_client_id())
-#     #     if filter_obj.get_client_id() != None and filter_obj.get_client_id() != "" :
-#     #         condition &= Q(client_id=filter_obj.get_client_id())
-#     #     # else:
-#     #     #     condition &= Q(client_id=None)
-#     #     if filter_obj.get_product_id() != None and filter_obj.get_product_id() != "" :
-#     #         condition &= Q(product_id=filter_obj.get_product_id())
-#     #     # else:
-#     #     #     condition &= Q(product_id=None)
-#     #     if filter_obj.get_business_id() != None and filter_obj.get_business_id() != "" :
-#     #         condition &= Q(business_id=filter_obj.get_business_id())
-#     #     # else:
-#     #     #     condition &= Q(business_id=None)
-#     #     # else:
-#     #     #     condition &= ~Q(business_id=None)
-#     #     #     condition &= ~Q(assest_class=None)
-#     #     #     condition &= ~Q(client_id=None)
-#     #     #     condition &= ~Q(product_id=None)
-#     #     filter_var  = Income_overalldata.objects.using(self._current_app_schema()).filter(condition).values("interest_gl","assest_class").annotate(interest_amount=F("fee_due")+F("interest_amount")+F("eir_amount"))\
-#     #                                                                     .values("business_id","interest_gl",
-#     #                                                                             "assest_class","interest_amount",
-#     #                                                                             "client_id",
-#     #                                                                             "product_id")
-#     #     prolist = NWisefinList()
-#     #     if len(filter_var) == 0:
-#     #         return prolist
-#     #     else:
-#     #         for data in filter_var:
-#     #             ppr_response = Income_details_response()
-#     #             ppr_response.set_interest_amount(data["interest_amount"])
-#     #             ppr_response.set_interest_gl(data["interest_gl"])
-#     #             exp_dtls = APsubcategory.objects.using(self._current_app_schema()).filter(glno=data["interest_gl"]).values("glno","category__expense__exp_grp_id")
-#     #             exp_dtls = masterservice.get_subcat_expgrp(data["interest_gl"])
-#     #             for j in exp_dtls:
-#     #                 expgrp_dtls = masterservice.get_expense_grp(j['category__expense__exp_grp_id'])
-#     #                 # expgrp_dtls = APexpensegroup.objects.using(self._current_app_schema()).filter(id=j["category__expense__exp_grp_id"]).values("id","name")
-#     #                 for i in expgrp_dtls:
-#     #                     ppr_response.set_id(i["id"])
-#     #                     ppr_response.set_name(i["name"])
-#     #             user_dtls = masterservice.get_BS_id([data["assest_class"]])
-#     #             ppr_response.set_assest_class(user_dtls[0]["name"])
-#     #             prolist.append(ppr_response)
-#     #     return prolist
-#
+    # def new_ppr_incomegrp_logic(self,filter_obj):
+    #     # masterservice=MASTER_SERVICE(self._scope())
+    #     # user_service = USER_SERVICE(self._scope())
+    #     condition = Q(status=1)
+    #     if filter_obj.get_from_date() != None and filter_obj.get_from_date() != "" and filter_obj.get_to_date() != None and filter_obj.get_to_date() != "":
+    #         condition &= Q(updated_date__range=[filter_obj.get_from_date(),filter_obj.get_to_date()])
+    #     # if filter_obj.get_business_id() != 4:
+    #     if filter_obj.get_asset_id() != None and filter_obj.get_asset_id() != "" and len(filter_obj.get_asset_id()) != 0:
+    #         condition &= Q(assest_class__in=filter_obj.get_asset_id())
+    #     # else:
+    #     #     condition &= ~Q(assest_class=None)
+    #     if filter_obj.get_Rm_id() != None and filter_obj.get_Rm_id() != "":
+    #         rm = self.client_get(filter_obj.get_Rm_id())
+    #         rm.append(filter_obj.get_client_id())
+    #     if filter_obj.get_client_id() != None and filter_obj.get_client_id() != "" :
+    #         condition &= Q(client_id=filter_obj.get_client_id())
+    #     # else:
+    #     #     condition &= Q(client_id=None)
+    #     if filter_obj.get_product_id() != None and filter_obj.get_product_id() != "" :
+    #         condition &= Q(product_id=filter_obj.get_product_id())
+    #     # else:
+    #     #     condition &= Q(product_id=None)
+    #     if filter_obj.get_business_id() != None and filter_obj.get_business_id() != "" :
+    #         condition &= Q(business_id=filter_obj.get_business_id())
+    #     # else:
+    #     #     condition &= Q(business_id=None)
+    #     # else:
+    #     #     condition &= ~Q(business_id=None)
+    #     #     condition &= ~Q(assest_class=None)
+    #     #     condition &= ~Q(client_id=None)
+    #     #     condition &= ~Q(product_id=None)
+    #     filter_var  = Income_overalldata.objects.using(self._current_app_schema()).filter(condition).values("interest_gl","assest_class").annotate(interest_amount=F("fee_due")+F("interest_amount")+F("eir_amount"))\
+    #                                                                     .values("business_id","interest_gl",
+    #                                                                             "assest_class","interest_amount",
+    #                                                                             "client_id",
+    #                                                                             "product_id")
+    #     prolist = NWisefinList()
+    #     if len(filter_var) == 0:
+    #         return prolist
+    #     else:
+    #         arr=[]
+    #         for data in filter_var:
+    #             ppr_response = Income_details_response()
+    #             ppr_response.set_interest_amount(data["interest_amount"])
+    #             ppr_response.set_interest_gl(data["interest_gl"])
+    #             arr.append(data["assest_class"])
+    #             exp_dtls = APsubcategory.objects.using(self._current_app_schema()).filter(glno=data["interest_gl"]).values("glno","category__expense__exp_grp_id")
+    #             exp_dtls = masterservice.get_subcat_expgrp(data["interest_gl"])
+    #             for j in exp_dtls:
+    #                 expgrp_dtls = masterservice.get_expense_grp(j['category__expense__exp_grp_id'])
+    #                 # expgrp_dtls = APexpensegroup.objects.using(self._current_app_schema()).filter(id=j["category__expense__exp_grp_id"]).values("id","name")
+    #                 for i in expgrp_dtls:
+    #                     ppr_response.set_id(i["id"])
+    #                     ppr_response.set_name(i["name"])
+    #             user_dtls = masterservice.get_BS_id([data["assest_class"]])
+    #             ppr_response.set_assest_class(user_dtls[0]["name"])
+    #             prolist.append(ppr_response)
+    #     return prolist
+
 #     def new_incomehead_logic(self,filter_obj):
 #         masterservice=MASTER_SERVICE(self._scope())
 #         # user_service = USER_SERVICE(self._scope())
@@ -3759,6 +3740,41 @@ class Income_Service(NWisefinThread):
                         flag=int(data["Flag"]), sanctioned_amount=data["Sanctioned Amount"],
                         sanctioned_date=data["Sanctioned Date"], opening_pos=data["Opening POS"],
                         closing_pos=data["Closing POS"], date=data["date"])
+
+    def budget_upload(self, request, fin_year, user_id, date):
+        code_arr = []
+        gldata = GL_Subgroup.objects.using(self._current_app_schema()).filter(status=1).values('gl_no', 'id')
+        for i in gldata:
+            code_arr.append({"gl_id": i["id"], "gl_no": i["gl_no"]})
+        glno_df = pd.DataFrame(code_arr)
+        main_df = pd.read_excel(request.FILES['budget_file'], sheet_name='Sheet1')
+        print("main_df", len(main_df))
+        datetype = {"gl_id": int, "gl_no": int}
+        asdatatype = {"GL Code": int}
+        my_date = date
+        print(my_date)
+        year = int(my_date.split('-')[0])
+        month1 = int(my_date.split('-')[1])
+        parent_df = glno_df.astype(datetype)
+        main_df = main_df.astype(asdatatype)
+        df1 = pd.merge(main_df, parent_df, how='inner', left_on=['GL Code'],
+                       right_on=['gl_no'])
+        print("df1", len(df1))
+        print(df1)
+        df3 = df1.replace({np.nan: None})
+        df3_dict = df3.to_dict(orient='records')
+        print(len(df3_dict))
+        arr = []
+        pro_list = NWisefinList()
+        for i in df3_dict:
+            obj_data = Budgetdetial(finyear=fin_year, created_by=user_id,valuedate=my_date,
+                               transactionyear=year,transactionmonth=month1,
+                               bizname=0, apsubcat_glno=i["gl_no"], apsubcat_id=i["gl_id"],amount=i["Net Amount"])
+            arr.append(obj_data)
+        Budgetdetial.objects.bulk_create(arr)
+        return pro_list
+
+
 
 
 

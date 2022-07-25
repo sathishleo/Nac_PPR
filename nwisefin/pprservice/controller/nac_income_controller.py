@@ -101,22 +101,22 @@ def fileupload_cc_income(request):
         resp_obj = budget_service.fileupload_cc_income(transation_obj,employee_id,request)
         return HttpResponse(resp_obj.get(), content_type='application/json')
 
-#
-# @api_view(['GET', 'POST'])
-# @authentication_classes([NWisefinAuthentication])
+
+@api_view(['GET', 'POST'])
+@authentication_classes([NWisefinAuthentication])
 # @permission_classes([IsAuthenticated, NWisefinPermission])
-# def income_header_fetch(request):
-#     if request.method == 'POST':
-#         scope=request.scope
-#         budget_service = Income_Service(scope)
-#         employee_id = request.employee_id
-#         data=json.loads(request.body)
-#         page = request.GET.get('page', 1)
-#         page = int(page)
-#         vys_page = NWisefinPage(page, 10)
-#         resp_obj = budget_service.income_header_fetch(data, employee_id,vys_page)
-#         return HttpResponse(resp_obj.get(), content_type='application/json')
-#
+def income_header_fetch(request):
+    if request.method == 'POST':
+        scope=request.scope
+        budget_service = Income_Service(scope)
+        employee_id = request.employee_id
+        data=json.loads(request.body)
+        page = request.GET.get('page', 1)
+        page = int(page)
+        vys_page = NWisefinPage(page, 10)
+        resp_obj = budget_service.income_header_fetch(data, employee_id,vys_page)
+        return HttpResponse(resp_obj.get(), content_type='application/json')
+
 # @api_view(['GET', 'POST'])
 # @authentication_classes([NWisefinAuthentication])
 # @permission_classes([IsAuthenticated, NWisefinPermission])
@@ -157,29 +157,29 @@ def fileupload_cc_income(request):
 #         vys_page = NWisefinPage(page, 10)
 #         resp_obj = budget_service.income_header_amount(data, employee_id,vys_page)
 #         return HttpResponse(resp_obj, content_type='application/json')
-#
-# @api_view(['GET', 'POST'])
-# @authentication_classes([NWisefinAuthentication])
+
+@api_view(['GET', 'POST'])
+@authentication_classes([NWisefinAuthentication])
 # @permission_classes([IsAuthenticated, NWisefinPermission])
-# def income_amount_date(request):
-#     if request.method == 'POST':
-#         scope=request.scope
-#         budget_service = Income_Service(scope)
-#         employee_id = request.employee_id
-#         data=json.loads(request.body)
-#         page = request.GET.get('page', 1)
-#         page = int(page)
-#         vys_page = NWisefinPage(page, 10)
-#         if data["Rm_id"]=="":
-#             data.pop("Rm_id")
-#         if data["client_id"]=="":
-#             data.pop("client_id")
-#         if len(data["assest_class"])==0:
-#             data.pop("assest_class")
-#         if data["product_id"]=="":
-#             data.pop("product_id")
-#         resp_obj = budget_service.income_amount_date(data, employee_id,vys_page)
-#         return HttpResponse(resp_obj, content_type='application/json')
+def income_amount_date(request):
+    if request.method == 'POST':
+        scope=request.scope
+        budget_service = Income_Service(scope)
+        employee_id = request.employee_id
+        data=json.loads(request.body)
+        page = request.GET.get('page', 1)
+        page = int(page)
+        vys_page = NWisefinPage(page, 10)
+        if data["Rm_id"]=="":
+            data.pop("Rm_id")
+        if data["client_id"]=="":
+            data.pop("client_id")
+        if len(data["assest_class"])==0:
+            data.pop("assest_class")
+        if data["product_id"]=="":
+            data.pop("product_id")
+        resp_obj = budget_service.income_amount_date(request,data, employee_id,vys_page)
+        return HttpResponse(resp_obj, content_type='application/json')
 #
 # @csrf_exempt
 # @api_view(['POST'])
@@ -222,24 +222,24 @@ def fileupload_cc_income(request):
 #         response = HttpResponse(ppr_data.get(), content_type="application/json")
 #         return response
 #
-# @csrf_exempt
-# @api_view(['GET'])
-# @authentication_classes([NWisefinAuthentication])
+@csrf_exempt
+@api_view(['GET'])
+@authentication_classes([NWisefinAuthentication])
 # @permission_classes([IsAuthenticated, NWisefinPermission])
-# def ppr_assetclass(request):
-#     scope = request.scope
-#     if request.method == 'GET':
-#         page = request.GET.get('page', 1)
-#         page = int(page)
-#         vys_page = NWisefinPage(page, 10)
-#
-#         Assettype_id=request.GET.get("assettype_id")
-#         QUERY = request.GET.get("query")
-#         TYPE = request.GET.get("type")
-#         pprservice = Income_Service(scope)
-#         response_data = pprservice.get_client(Assettype_id,QUERY,TYPE,vys_page)
-#         response = HttpResponse(response_data.get(), content_type="application/json")
-#         return response
+def ppr_assetclass(request):
+    scope = request.scope
+    if request.method == 'GET':
+        page = request.GET.get('page', 1)
+        page = int(page)
+        vys_page = NWisefinPage(page, 10)
+
+        Assettype_id=request.GET.get("assettype_id")
+        QUERY = request.GET.get("query")
+        TYPE = request.GET.get("type")
+        pprservice = Income_Service(scope)
+        response_data = pprservice.get_client(Assettype_id,QUERY,TYPE,vys_page)
+        response = HttpResponse(response_data.get(), content_type="application/json")
+        return response
 #
 # @csrf_exempt
 # @api_view(['GET'])
@@ -254,30 +254,30 @@ def fileupload_cc_income(request):
 #         response = HttpResponse(response_data.get(), content_type="application/json")
 #         return response
 #
-# @csrf_exempt
-# @api_view(['POST'])
-# @authentication_classes([NWisefinAuthentication])
+@csrf_exempt
+@api_view(['POST'])
+@authentication_classes([NWisefinAuthentication])
 # @permission_classes([IsAuthenticated, NWisefinPermission])
-# def ppr_income_Filedownload(request):
-#     scope = request.scope
-#     if request.method == 'POST':
-#         employee_id = request.employee_id
-#         data = json.loads(request.body)
-#         pprservice = Income_Service(scope)
-#         page = request.GET.get('page', 1)
-#         page = int(page)
-#         if data["Rm_id"]=="":
-#             data.pop("Rm_id")
-#         if data["client_id"]=="":
-#             data.pop("client_id")
-#         if len(data["assest_class"])==0:
-#             data.pop("assest_class")
-#         if data["product_id"]=="":
-#             data.pop("product_id")
-#         vys_page = NWisefinPage(page, 10)
-#         response_data = pprservice.income_Filedownload(data,employee_id,scope,0)
-#         return response_data
-#
+def ppr_income_Filedownload(request):
+    scope = request.scope
+    if request.method == 'POST':
+        employee_id = request.employee_id
+        data = json.loads(request.body)
+        pprservice = Income_Service(scope)
+        page = request.GET.get('page', 1)
+        page = int(page)
+        if data["Rm_id"]=="":
+            data.pop("Rm_id")
+        if data["client_id"]=="":
+            data.pop("client_id")
+        if len(data["assest_class"])==0:
+            data.pop("assest_class")
+        if data["product_id"]=="":
+            data.pop("product_id")
+        vys_page = NWisefinPage(page, 10)
+        response_data = pprservice.income_Filedownload(data,employee_id,scope,0)
+        return response_data
+
 @csrf_exempt
 @api_view(['POST'])
 @authentication_classes([NWisefinAuthentication])
@@ -529,21 +529,21 @@ def gl_subgroup_list_dropdown(request):
 #         response = HttpResponse(resp_data.get(), content_type="application/json")
 #         return response
 #
-# @csrf_exempt
-# @api_view(['POST'])
-# @authentication_classes([NWisefinAuthentication])
+@csrf_exempt
+@api_view(['POST'])
+@authentication_classes([NWisefinAuthentication])
 # @permission_classes([IsAuthenticated, NWisefinPermission])
-# def new_ppr_incomegrp(request):
-#     scope = request.scope
-#     if request.method == 'POST':
-#         filter_obj = json.loads(request.body)
-#         filter_obj = ppr_source_request(filter_obj)
-#         pprservice = Income_Service(scope)
-#         aa=filter_obj.get_asset_ref()
-#         ppr_data = pprservice.new_ppr_incomegrp_logic(filter_obj)
-#         resp_data = pprservice.ppr_income_logic(1,ppr_data.get(),aa)
-#         response = HttpResponse(resp_data.get(), content_type="application/json")
-#         return response
+def new_ppr_incomegrp(request):
+    scope = request.scope
+    if request.method == 'POST':
+        filter_obj = json.loads(request.body)
+        filter_obj = ppr_source_request(filter_obj)
+        pprservice = Income_Service(scope)
+        aa=filter_obj.get_asset_ref()
+        ppr_data = pprservice.new_ppr_incomegrp_logic(filter_obj)
+        resp_data = pprservice.ppr_income_logic(1,ppr_data.get(),aa)
+        response = HttpResponse(resp_data.get(), content_type="application/json")
+        return response
 #
 # @csrf_exempt
 # @api_view(['POST'])
@@ -595,7 +595,7 @@ def gl_subgroup_list_dropdown(request):
 @csrf_exempt
 @api_view(['POST','GET'])
 @authentication_classes([NWisefinAuthentication])
-@permission_classes([IsAuthenticated, NWisefinPermission])
+# @permission_classes([IsAuthenticated, NWisefinPermission])
 def instatus_edit(request):
 
     scope = request.scope
@@ -677,3 +677,19 @@ def modify_edit(request):
         ppr_data = pprservice.fetch_GL_subgrp(query)
         response = HttpResponse(ppr_data.get(), content_type="application/json")
         return response
+
+@csrf_exempt
+@api_view(['POST','GET'])
+@authentication_classes([NWisefinAuthentication])
+# @permission_classes([IsAuthenticated, NWisefinPermission])
+def budget_data(request):
+    scope = request.scope
+    if request.method == 'POST':
+        income_serv = Income_Service(scope)
+        user_id = request.employee_id
+        finyear = request.GET.get('finyear')
+        date= request.GET.get('date')
+        resp_obj = income_serv.budget_upload(request,finyear,user_id,date)
+        response = HttpResponse(resp_obj.get(), content_type="application/json")
+        return response
+

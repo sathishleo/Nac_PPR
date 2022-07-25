@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.db.models.aggregates import Sum
 from nwisefin.settings import SERVER_IP
 from pprservice.models import AllocationLevel, Allocation_meta
-from pprservice.util.pprutility import MASTER_SERVICE, USER_SERVICE, Ppr_utilityservice
+from ppr_middleware.external_api import Masterservice,Userservice
 from utilityservice.service.applicationconstants import ApplicationNamespace
 from utilityservice.service.threadlocal import NWisefinThread
 from utilityservice.data.response.nwisefinerror import NWisefinError
@@ -15,148 +15,149 @@ from utilityservice.data.response.nwisefinsuccess import SuccessStatus, SuccessM
 from utilityservice.data.response.nwisefinlist import NWisefinList
 from utilityservice.data.response.nwisefinpaginator import NWisefinPaginator
 from datetime import datetime
-
-from wisefinapi.internal.tokenhandler import TokenHandler
+from pprservice.util.pprutility import Ppr_utilityservice
+#
+# from .internal.tokenhandler import TokenHandler
 
 now = datetime.now()
 from pprservice.data.response.allocationlevelresponse import AllocationLevelResponse,New_AllocationLevelResponse,allocation_response
 from pprservice.models.pprmodel import Pprdata_maintable, Ppr_Expense_Alldata, Pprdata
-
-
+#
+#
 class AllocationLevelService(NWisefinThread):
     def __init__(self, scope):
         super().__init__(scope)
         self._set_namespace(ApplicationNamespace.PPR_SERVICE)
-    def create_allocationlevel(self, allocationlevel_obj, user_id):
-        if not allocationlevel_obj.get_id() is None:
-            try:
-                allocation_update = AllocationLevel.objects.using(self._current_app_schema()).filter(id=allocationlevel_obj.get_id(),entity_id=self._entity_id()).update(
-                                name=allocationlevel_obj.get_name(),
-                                arrange=allocationlevel_obj.get_arrange(),
-                                reportlevel=allocationlevel_obj.get_reportlevel(),
-                                updated_date=now,
-                                updated_by=user_id)
-
-                allocation_update = AllocationLevel.objects.using(self._current_app_schema()).get(id=allocationlevel_obj.get_id())
-
-            except IntegrityError as error:
-                error_obj = NWisefinError()
-                error_obj.set_code(ErrorMessage.INVALID_DATA)
-                error_obj.set_description(ErrorDescription.INVALID_DATA)
-                return error_obj
-            except AllocationLevel.DoesNotExist:
-                error_obj = NWisefinError()
-                error_obj.set_code(ErrorMessage.INVALID_CATEGORY_ID)
-                error_obj.set_description(ErrorDescription.INVALID_CATEGORY_ID)
-                return error_obj
-            except:
-                error_obj = NWisefinError()
-                error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
-                error_obj.set_description(ErrorDescription.UNEXPECTED_ERROR)
-                return error_obj
-        else:
-            try:
-                allocation_update = AllocationLevel.objects.using(self._current_app_schema()).create(
-                                                    name=allocationlevel_obj.get_name(),
-                                                    arrange=allocationlevel_obj.get_arrange(),
-                                                    reportlevel=allocationlevel_obj.get_reportlevel(),
-                                                    created_by=user_id,entity_id=self._entity_id())
-                code = "AL" + str(allocation_update.id)
-                allocation_update.code = code
-                allocation_update.save()
-
-            except IntegrityError as error:
-                error_obj = NWisefinError()
-                error_obj.set_code(ErrorMessage.INVALID_DATA)
-                error_obj.set_description(ErrorDescription.INVALID_DATA)
-                return error_obj
-            except:
-                error_obj = NWisefinError()
-                error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
-                error_obj.set_description(ErrorDescription.UNEXPECTED_ERROR)
-                return error_obj
-
-        allocation_data = AllocationLevelResponse()
-        allocation_data.set_id(allocation_update.id)
-        allocation_data.set_code(allocation_update.code)
-        allocation_data.set_name(allocation_update.name)
-        allocation_data.set_arrange(allocation_update.arrange)
-        allocation_data.set_reportlevel(allocation_update.reportlevel)
-        return allocation_data
-
-    def fetch_allocationlevel_list(self,vys_page,query):
-        conditions = Q(status=1,entity_id=self._entity_id())
-        if query is not None:
-            conditions &= Q(name__icontains=query)
-        cost_obj = AllocationLevel.objects.using(self._current_app_schema()).filter(conditions).order_by('created_date')[
-                         vys_page.get_offset():vys_page.get_query_limit()]
-        list_length = len(cost_obj)
-        cost_list_data = NWisefinList()
-        if list_length >= 0:
-            for catobj in cost_obj:
-                cost_data = AllocationLevelResponse()
-                cost_data.set_id(catobj.id)
-                cost_data.set_code(catobj.code)
-                cost_data.set_name(catobj.name)
-                cost_data.set_arrange(catobj.arrange)
-                cost_data.set_reportlevel(catobj.reportlevel)
-                cost_list_data.append(cost_data)
-                vpage = NWisefinPaginator(cost_obj, vys_page.get_index(), 10)
-                cost_list_data.set_pagination(vpage)
-        return cost_list_data
-
-    def fetch_allocationlevel(self, allocation_id,user_id):
-        try:
-            cost_var = AllocationLevel.objects.using(self._current_app_schema()).get(id=allocation_id,entity_id=self._entity_id())
-            cost_data = AllocationLevelResponse()
-            cost_data.set_id(cost_var.id)
-            cost_data.set_code(cost_var.code)
-            cost_data.set_name(cost_var.name)
-            cost_data.set_arrange(cost_var.arrange)
-            cost_data.set_reportlevel(cost_var.reportlevel)
-            return cost_data
-        except AllocationLevel.DoesNotExist:
-            error_obj = NWisefinError()
-            error_obj.set_code(ErrorMessage.INVALID_BANK_ID)
-            error_obj.set_description(ErrorDescription.INVALID_BANK_ID)
-            return error_obj
-
-    def delete_allocation(self, allocation_id,user_id):
-        cost_obj = AllocationLevel.objects.using(self._current_app_schema()).filter(id=allocation_id,entity_id=self._entity_id()).delete()
-
-        if cost_obj[0] == 0:
-            error_obj = NWisefinError()
-            error_obj.set_code(ErrorMessage.INVALID_BANK_ID)
-            error_obj.set_description(ErrorDescription.INVALID_BANK_ID)
-            return error_obj
-        else:
-            success_obj = NWisefinSuccess()
-            success_obj.set_status(SuccessStatus.SUCCESS)
-            success_obj.set_message(SuccessMessage.DELETE_MESSAGE)
-            return success_obj
-
-    def fetch_costdriver_search(self,query,vys_page):
-        condition=Q(status=1,entity_id=self._entity_id())
-        if query is not None:
-            condition &=Q(name__icontains=query)
-        cost_obj = AllocationLevel.objects.using(self._current_app_schema()).filter(condition).order_by('created_date')[
-                         vys_page.get_offset():vys_page.get_query_limit()]
-        cost_list_data = NWisefinList()
-        for catobj in cost_obj:
-            cost_data = AllocationLevelResponse()
-            cost_data.set_id(catobj.id)
-            cost_data.set_code(catobj.code)
-            cost_data.set_name(catobj.name)
-            cost_data.set_arrange(catobj.arrange)
-            cost_data.set_reportlevel(catobj.reportlevel)
-            cost_list_data.append(cost_data)
-            vpage = NWisefinPaginator(cost_obj, vys_page.get_index(), 10)
-            cost_list_data.set_pagination(vpage)
-        return cost_list_data
-
-    def fetch_new_allocation_level(self,business_obj):
-        masterservice = MASTER_SERVICE(self._scope())
-        userservice = USER_SERVICE(self._scope())
+#     def create_allocationlevel(self, allocationlevel_obj, user_id):
+#         if not allocationlevel_obj.get_id() is None:
+#             try:
+#                 allocation_update = AllocationLevel.objects.using(self._current_app_schema()).filter(id=allocationlevel_obj.get_id(),entity_id=self._entity_id()).update(
+#                                 name=allocationlevel_obj.get_name(),
+#                                 arrange=allocationlevel_obj.get_arrange(),
+#                                 reportlevel=allocationlevel_obj.get_reportlevel(),
+#                                 updated_date=now,
+#                                 updated_by=user_id)
+#
+#                 allocation_update = AllocationLevel.objects.using(self._current_app_schema()).get(id=allocationlevel_obj.get_id())
+#
+#             except IntegrityError as error:
+#                 error_obj = NWisefinError()
+#                 error_obj.set_code(ErrorMessage.INVALID_DATA)
+#                 error_obj.set_description(ErrorDescription.INVALID_DATA)
+#                 return error_obj
+#             except AllocationLevel.DoesNotExist:
+#                 error_obj = NWisefinError()
+#                 error_obj.set_code(ErrorMessage.INVALID_CATEGORY_ID)
+#                 error_obj.set_description(ErrorDescription.INVALID_CATEGORY_ID)
+#                 return error_obj
+#             except:
+#                 error_obj = NWisefinError()
+#                 error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
+#                 error_obj.set_description(ErrorDescription.UNEXPECTED_ERROR)
+#                 return error_obj
+#         else:
+#             try:
+#                 allocation_update = AllocationLevel.objects.using(self._current_app_schema()).create(
+#                                                     name=allocationlevel_obj.get_name(),
+#                                                     arrange=allocationlevel_obj.get_arrange(),
+#                                                     reportlevel=allocationlevel_obj.get_reportlevel(),
+#                                                     created_by=user_id,entity_id=self._entity_id())
+#                 code = "AL" + str(allocation_update.id)
+#                 allocation_update.code = code
+#                 allocation_update.save()
+#
+#             except IntegrityError as error:
+#                 error_obj = NWisefinError()
+#                 error_obj.set_code(ErrorMessage.INVALID_DATA)
+#                 error_obj.set_description(ErrorDescription.INVALID_DATA)
+#                 return error_obj
+#             except:
+#                 error_obj = NWisefinError()
+#                 error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
+#                 error_obj.set_description(ErrorDescription.UNEXPECTED_ERROR)
+#                 return error_obj
+#
+#         allocation_data = AllocationLevelResponse()
+#         allocation_data.set_id(allocation_update.id)
+#         allocation_data.set_code(allocation_update.code)
+#         allocation_data.set_name(allocation_update.name)
+#         allocation_data.set_arrange(allocation_update.arrange)
+#         allocation_data.set_reportlevel(allocation_update.reportlevel)
+#         return allocation_data
+#
+#     def fetch_allocationlevel_list(self,vys_page,query):
+#         conditions = Q(status=1,entity_id=self._entity_id())
+#         if query is not None:
+#             conditions &= Q(name__icontains=query)
+#         cost_obj = AllocationLevel.objects.using(self._current_app_schema()).filter(conditions).order_by('created_date')[
+#                          vys_page.get_offset():vys_page.get_query_limit()]
+#         list_length = len(cost_obj)
+#         cost_list_data = NWisefinList()
+#         if list_length >= 0:
+#             for catobj in cost_obj:
+#                 cost_data = AllocationLevelResponse()
+#                 cost_data.set_id(catobj.id)
+#                 cost_data.set_code(catobj.code)
+#                 cost_data.set_name(catobj.name)
+#                 cost_data.set_arrange(catobj.arrange)
+#                 cost_data.set_reportlevel(catobj.reportlevel)
+#                 cost_list_data.append(cost_data)
+#                 vpage = NWisefinPaginator(cost_obj, vys_page.get_index(), 10)
+#                 cost_list_data.set_pagination(vpage)
+#         return cost_list_data
+#
+#     def fetch_allocationlevel(self, allocation_id,user_id):
+#         try:
+#             cost_var = AllocationLevel.objects.using(self._current_app_schema()).get(id=allocation_id,entity_id=self._entity_id())
+#             cost_data = AllocationLevelResponse()
+#             cost_data.set_id(cost_var.id)
+#             cost_data.set_code(cost_var.code)
+#             cost_data.set_name(cost_var.name)
+#             cost_data.set_arrange(cost_var.arrange)
+#             cost_data.set_reportlevel(cost_var.reportlevel)
+#             return cost_data
+#         except AllocationLevel.DoesNotExist:
+#             error_obj = NWisefinError()
+#             error_obj.set_code(ErrorMessage.INVALID_BANK_ID)
+#             error_obj.set_description(ErrorDescription.INVALID_BANK_ID)
+#             return error_obj
+#
+#     def delete_allocation(self, allocation_id,user_id):
+#         cost_obj = AllocationLevel.objects.using(self._current_app_schema()).filter(id=allocation_id,entity_id=self._entity_id()).delete()
+#
+#         if cost_obj[0] == 0:
+#             error_obj = NWisefinError()
+#             error_obj.set_code(ErrorMessage.INVALID_BANK_ID)
+#             error_obj.set_description(ErrorDescription.INVALID_BANK_ID)
+#             return error_obj
+#         else:
+#             success_obj = NWisefinSuccess()
+#             success_obj.set_status(SuccessStatus.SUCCESS)
+#             success_obj.set_message(SuccessMessage.DELETE_MESSAGE)
+#             return success_obj
+#
+#     def fetch_costdriver_search(self,query,vys_page):
+#         condition=Q(status=1,entity_id=self._entity_id())
+#         if query is not None:
+#             condition &=Q(name__icontains=query)
+#         cost_obj = AllocationLevel.objects.using(self._current_app_schema()).filter(condition).order_by('created_date')[
+#                          vys_page.get_offset():vys_page.get_query_limit()]
+#         cost_list_data = NWisefinList()
+#         for catobj in cost_obj:
+#             cost_data = AllocationLevelResponse()
+#             cost_data.set_id(catobj.id)
+#             cost_data.set_code(catobj.code)
+#             cost_data.set_name(catobj.name)
+#             cost_data.set_arrange(catobj.arrange)
+#             cost_data.set_reportlevel(catobj.reportlevel)
+#             cost_list_data.append(cost_data)
+#             vpage = NWisefinPaginator(cost_obj, vys_page.get_index(), 10)
+#             cost_list_data.set_pagination(vpage)
+#         return cost_list_data
+#
+    def fetch_new_allocation_level(self,request,business_obj):
+        masterservice = Masterservice()
+        # userservice = (self._scope())
         srce_condition = Q(status = 1,entity_id=self._entity_id())
         if business_obj.get_core_bscc() != None and business_obj.get_core_bscc() != "":
             srce_condition &= Q(frombscccode=business_obj.get_core_bscc())
@@ -234,8 +235,8 @@ class AllocationLevelService(NWisefinThread):
                     for obj1 in ppr_obj:
                         total_amount = total_amount + float(obj1["net_amount"])
                 else:
-                    masterservice = MASTER_SERVICE(self._scope())
-                    subcat_expensegrp = masterservice.get_subcat_expense()
+                    masterservice = Masterservice()
+                    subcat_expensegrp = masterservice.get_subcat_expense(request)
                     my_list = [foo for foo in subcat_expensegrp]
                     xp_condition = Q(status=1, apsubcat_id__in=my_list)
                     if business_obj.get_bs_id() != None and business_obj.get_bs_id() != "" \
@@ -279,10 +280,10 @@ class AllocationLevelService(NWisefinThread):
                     to_bscc.append(x['bscc_code'])
                     cc_id.append(x["cc_id"])
                     bs_id.append(x["bs_id"])
-                from_bscc_data = masterservice.get_mstbissegment(from_bscc)
-                to_bscc_data = masterservice.get_mstbissegment(to_bscc)
-                bs_data = masterservice.get_BS_id(bs_id)
-                cc_data = masterservice.get_CC_id(cc_id)
+                from_bscc_data = masterservice.get_mstsegment(request,from_bscc)
+                to_bscc_data = masterservice.get_mstsegment(request,to_bscc)
+                bs_data = masterservice.get_BS_id(request,bs_id)
+                cc_data = masterservice.get_CC_id(request,cc_id)
                 for obj in allocation_obj:
                     cost_responser = New_AllocationLevelResponse()
                     cost_responser.set_coreccbbs_data(obj["id"], from_bscc_data)
@@ -314,8 +315,8 @@ class AllocationLevelService(NWisefinThread):
                     for obj1 in ppr_obj:
                         total_amount = total_amount + float(obj1["net_amount"])
                 else:
-                    masterservice = MASTER_SERVICE(self._scope())
-                    subcat_expensegrp = masterservice.get_subcat_expense()
+                    masterservice = Masterservice()
+                    subcat_expensegrp = masterservice.get_subcat_expense(request)
                     my_list = [foo for foo in subcat_expensegrp]
                     xp_condition = Q(status=1,apsubcat_id__in=my_list)
                     if business_obj.get_bs_id() != None and business_obj.get_bs_id() != "":
@@ -340,10 +341,10 @@ class AllocationLevelService(NWisefinThread):
                     to_bscc.append(x['bscc_code'])
                     cc_id.append(x["cc_id"])
                     bs_id.append(x["bs_id"])
-                from_bscc_data = masterservice.get_mstbissegment(from_bscc)
-                to_bscc_data = masterservice.get_mstbissegment(to_bscc)
-                bs_data = masterservice.get_BS_id(bs_id)
-                cc_data = masterservice.get_CC_id(cc_id)
+                from_bscc_data = masterservice.get_mstsegment(request,from_bscc)
+                to_bscc_data = masterservice.get_mstsegment(request,to_bscc)
+                bs_data = masterservice.get_BS_id(request,bs_id)
+                cc_data = masterservice.get_CC_id(request,cc_id)
                 for obj in allocation_obj:
                     cost_responser = New_AllocationLevelResponse()
                     cost_responser.set_coreccbbs_data(obj["id"],from_bscc_data)
@@ -466,231 +467,231 @@ class AllocationLevelService(NWisefinThread):
         success_obj.set_status(SuccessStatus.SUCCESS)
         success_obj.set_message(SuccessMessage.CREATE_MESSAGE)
         return success_obj
-
-    def get_core_level(self, filter_obj, vys_page):
-        masterservice = MASTER_SERVICE(self._scope())
-        userservice = USER_SERVICE(self._scope())
-        prolist = NWisefinList()
-        condition = Q(status=1)
-        if filter_obj.get_core_bscc() != None and filter_obj.get_core_bscc() != "":
-            condition &= Q(bscc_code=filter_obj.get_core_bscc())
-        if filter_obj.get_bs_id() != None and filter_obj.get_bs_id() != "":
-            condition &= Q(bs_code=filter_obj.get_bs_id())
-        if filter_obj.get_cc_id() != None and filter_obj.get_cc_id() != "":
-            condition &= Q(cc_code=filter_obj.get_cc_id())
-        if filter_obj.get_level() != None and filter_obj.get_level() != "":
-            condition &= Q(level=filter_obj.get_level())
-        condition &= Q(source_bscc_code=None)
-        from_obj = Pprdata_maintable.objects.using(self._current_app_schema()).filter(condition)
-        allocation_arr = []
-        bs_id = []
-        cc_id = []
-        bscc_id = []
-        vlist = NWisefinList()
-        if len(from_obj) == 0:
-            # error_obj = NWisefinError()
-            # error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
-            # error_obj.set_description(ErrorDescription.NO_DATA_FOUND)
-            return vlist
-        else:
-            for i in from_obj:
-                allocation_arr.append(i.id)
-                bscc_id.append((i.bscc_code))
-                bs_id.append(i.bs_code)
-                cc_id.append(i.cc_code)
-            bsccdata1 = masterservice.get_mstsegment_id(bscc_id)
-            # bscc_value.append(bsccdata1)
-            bsdata1 = masterservice.get_BS_id(bs_id)
-            # bs_value.append(bsdata1)
-            ccdata1 = masterservice.get_CC_id(cc_id)
-            # cc_value.append(ccdata1)
-
-        To_allocation_data = Pprdata_maintable.objects.using(self._current_app_schema()).filter(
-                frombscccode=None,source_bscc_code__in=allocation_arr,
-                entity_id=self._entity_id())
-        arr=[]
-        for i in To_allocation_data:
-            arr.append(i.source_bscc_code)
-
-            bscc = []
-            bscc_val = []
-            cc_id = []
-            cc_val = []
-            bs = []
-            bs_val = []
-            vlist = NWisefinList()
-            # condition = Q(source_bscc_code=None)
-            # condition &= Q(id__in=arr)
-            # from_obj = Pprdata_maintable.objects.using(self._current_app_schema()).filter(condition)
-
-            if len(from_obj) == 0:
-                # error_obj = NWisefinError()
-                # error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
-                # error_obj.set_description(ErrorDescription.NO_DATA_FOUND)
-                return vlist
-            else:
-                bscc_id=[]
-                bs_id=[]
-                for i in from_obj:
-                    allocation_arr.append(i.id)
-                    bscc_id.append((i.bscc_code))
-                    bs_id.append(i.bs_code)
-                    cc_id.append(i.cc_code)
-                bsccdata1 = masterservice.get_mstsegment_id(bscc_id)
-                # bscc_value.append(bsccdata1)
-                bsdata1 = masterservice.get_BS_id(bs_id)
-                # bs_value.append(bsdata1)
-                ccdata1 = masterservice.get_CC_id(cc_id)
-                # cc_value.append(ccdata1)
-
-            for i in from_obj:
-                to_response_arr = []
-                from_response = allocation_response()
-                from_response.set_id(i.id)
-                # from_response.set_validity_from(i.validity_from)
-                # from_response.set_validity_to(i.validity_to)
-                if i.bscc_code != None:
-                    from_response.set_bscc(int(i.bscc_code), bsccdata1)
-                else:
-                    from_response.bscc_data = []
-                if i.cc_code != None:
-                    from_response.set_cc(int(i.cc_code), ccdata1)
-                else:
-                    from_response.cc_data = []
-                if i.bs_code != None:
-                    from_response.set_bs(int(i.bs_code), bsdata1)
-                else:
-                    from_response.bs_data = []
-                from_response.set_amount(str(i.amount))
-                if len(To_allocation_data) != 0:
-                    for j in To_allocation_data:
-                        if j.source_bscc_code == i.id:
-                            cc_id.append(j.cc_code)
-                            bs.append(j.bs_code)
-                            bscc.append(j.bscc_code)
-                            bsccdata2 = masterservice.get_mstsegment_id(bscc)
-                            bscc_val.append(bsccdata2)
-                            bs_data2 = masterservice.get_BS_id(bs)
-                            bs_val.append(bs_data2)
-                            cc_data2 = masterservice.get_CC_id(cc_id)
-                            cc_val.append(cc_data2)
-                            # cc_id.append(j.cc_code)
-                            # bs_id.append(j.bs_code)
-                            # bscc_id.append(j.bscc_code)
-                            # bsccdata1 = masterservice.get_mstsegment(bscc_id)
-                            # bs_data1 = userservice.get_BS(bs_id)
-                            #
-                            # cc_data1 = userservice.get_CC(cc_id)
-
-                            # bsccdata1 = masterservice.get_mstsegment([j.bscc_code])
-                            # BS = userservice.get_BS(bs_id)
-                            # CC = userservice.get_CC(cc_id)
-                            to_response = allocation_response()
-                            to_response.set_id(j.id)
-                            if j.bscc_code != None:
-                                to_response.set_bscc(j.bscc_code, bsccdata2)
-                            else:
-                                to_response.bscc_data = []
-                            if j.cc_code != None:
-                                to_response.set_cc(int(j.cc_code), cc_data2)
-                            else:
-                                to_response.cc_data = []
-                            if j.bs_code != None:
-                                to_response.set_bs(int(j.bs_code), bs_data2)
-                            else:
-                                to_response.bs_data = []
-                            to_response.amount = str(j.amount)
-                            to_response_arr.append(to_response)
-                            from_response.set_to_data(to_response_arr)
-                else:
-                    from_response.set_to_data(to_response_arr)
-                vlist.data.append(from_response)
-                vpage = NWisefinPaginator(from_obj, vys_page.get_index(), 10)
-                vlist.set_pagination(vpage)
-        return vlist
-
-    def get_corelevel_logic(self,allocbj):
-        vlist = NWisefinList()
-        pprdata = json.loads(allocbj)
-        masterservice = MASTER_SERVICE(self._scope())
-        if pprdata["data"] == []:
-            error_obj = NWisefinError()
-            # error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
-            # error_obj.set_description(ErrorDescription.NO_DATA_FOUND)
-            return vlist
-        prolist = NWisefinList()
-        # bscc_data = []
-        # from_bscc_data = []
-        # amount = []
-        for data in pprdata["data"]:
-            # bscc_data = []
-            # from_bscc_data = []
-            # amount = []
-
-            bscc_id = data["bscc_data"]["id"]
-            bs_id = data["bs_data"]["id"]
-            bs_name = data["bs_data"]["name"]
-            if data["bs_data"] != []:
-                master = masterservice.get_BS_mstbis([bscc_id])
-            # if data["bscc_data"] != []:
-            #     from_bscc_data.append(data["bscc_data"]["name"])
-            #     for bs in master:
-            #         if bs["id"] == data["bs_data"]["id"]:
-            #     bscc_data.append(data["bs_data"]["name"])
-            # elif data["cc_data"] != []:
-            #     bscc_data.append(data["cc_data"]["name"])
-            # amount.append(data["amount"])
-            for data1 in data["to_data"]:
-                row = ''
-                bscc_data = []
-                from_bscc_data = []
-                amount = []
-                if data1["bscc_data"] != []:
-                    bscc_data.append(data1["bscc_data"]["name"]+" -("+str(data1["bs_data"]["name"])+")")
-                if data1["bs_data"] != []:
-                    for bs in master:
-                        if bs["id"] == bs_id:
-                            from_bscc_data.append(bs["name"])
-                            amount.append(str(Decimal(data1["amount"])*-1))
-                        else:
-                            from_bscc_data.append(bs["name"])
-                            amount.append(0.00)
-                elif data1["cc_data"] != []:
-                    from_bscc_data.append(data1["cc_data"]["name"])
-                row = {"name":bscc_data,"value":from_bscc_data,"amount":amount}
-                prolist.append(row)
-            # for data1 in data["to_data"]:
-            #     bscc_data = []
-            #     from_bscc_data = []
-            #     amount = []
-            #     if int(bscc_id) == data1["bscc_data"]["id"]:
-            #         bscc_data.append(data1["bscc_data"]["name"])
-                    # bscc_data.append(bs_name)
-                    # for x in master:
-                    #     from_bscc_data.append(x["name"])
-                    #     if x["name"] == data1["bs_data"]["name"]:
-                    #         amount.append(data1["amount"])
-                    #     else:
-                    #         amount.append(0.00)
-                    # row = {"name": bscc_data, "value": from_bscc_data, "amount": amount}
-                    # prolist.append(row)
-        return prolist
-
-    def ppr_mstbusinesssegement(self, query, vys_page):  #
-        masterservice = MASTER_SERVICE(self._scope())
-        pro_list = masterservice.ppr_mstbusinesssegement(query, vys_page)
+#
+#     def get_core_level(self, filter_obj, vys_page):
+#         masterservice = MASTER_SERVICE(self._scope())
+#         userservice = USER_SERVICE(self._scope())
+#         prolist = NWisefinList()
+#         condition = Q(status=1)
+#         if filter_obj.get_core_bscc() != None and filter_obj.get_core_bscc() != "":
+#             condition &= Q(bscc_code=filter_obj.get_core_bscc())
+#         if filter_obj.get_bs_id() != None and filter_obj.get_bs_id() != "":
+#             condition &= Q(bs_code=filter_obj.get_bs_id())
+#         if filter_obj.get_cc_id() != None and filter_obj.get_cc_id() != "":
+#             condition &= Q(cc_code=filter_obj.get_cc_id())
+#         if filter_obj.get_level() != None and filter_obj.get_level() != "":
+#             condition &= Q(level=filter_obj.get_level())
+#         condition &= Q(source_bscc_code=None)
+#         from_obj = Pprdata_maintable.objects.using(self._current_app_schema()).filter(condition)
+#         allocation_arr = []
+#         bs_id = []
+#         cc_id = []
+#         bscc_id = []
+#         vlist = NWisefinList()
+#         if len(from_obj) == 0:
+#             # error_obj = NWisefinError()
+#             # error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
+#             # error_obj.set_description(ErrorDescription.NO_DATA_FOUND)
+#             return vlist
+#         else:
+#             for i in from_obj:
+#                 allocation_arr.append(i.id)
+#                 bscc_id.append((i.bscc_code))
+#                 bs_id.append(i.bs_code)
+#                 cc_id.append(i.cc_code)
+#             bsccdata1 = masterservice.get_mstsegment_id(bscc_id)
+#             # bscc_value.append(bsccdata1)
+#             bsdata1 = masterservice.get_BS_id(bs_id)
+#             # bs_value.append(bsdata1)
+#             ccdata1 = masterservice.get_CC_id(cc_id)
+#             # cc_value.append(ccdata1)
+#
+#         To_allocation_data = Pprdata_maintable.objects.using(self._current_app_schema()).filter(
+#                 frombscccode=None,source_bscc_code__in=allocation_arr,
+#                 entity_id=self._entity_id())
+#         arr=[]
+#         for i in To_allocation_data:
+#             arr.append(i.source_bscc_code)
+#
+#             bscc = []
+#             bscc_val = []
+#             cc_id = []
+#             cc_val = []
+#             bs = []
+#             bs_val = []
+#             vlist = NWisefinList()
+#             # condition = Q(source_bscc_code=None)
+#             # condition &= Q(id__in=arr)
+#             # from_obj = Pprdata_maintable.objects.using(self._current_app_schema()).filter(condition)
+#
+#             if len(from_obj) == 0:
+#                 # error_obj = NWisefinError()
+#                 # error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
+#                 # error_obj.set_description(ErrorDescription.NO_DATA_FOUND)
+#                 return vlist
+#             else:
+#                 bscc_id=[]
+#                 bs_id=[]
+#                 for i in from_obj:
+#                     allocation_arr.append(i.id)
+#                     bscc_id.append((i.bscc_code))
+#                     bs_id.append(i.bs_code)
+#                     cc_id.append(i.cc_code)
+#                 bsccdata1 = masterservice.get_mstsegment_id(bscc_id)
+#                 # bscc_value.append(bsccdata1)
+#                 bsdata1 = masterservice.get_BS_id(bs_id)
+#                 # bs_value.append(bsdata1)
+#                 ccdata1 = masterservice.get_CC_id(cc_id)
+#                 # cc_value.append(ccdata1)
+#
+#             for i in from_obj:
+#                 to_response_arr = []
+#                 from_response = allocation_response()
+#                 from_response.set_id(i.id)
+#                 # from_response.set_validity_from(i.validity_from)
+#                 # from_response.set_validity_to(i.validity_to)
+#                 if i.bscc_code != None:
+#                     from_response.set_bscc(int(i.bscc_code), bsccdata1)
+#                 else:
+#                     from_response.bscc_data = []
+#                 if i.cc_code != None:
+#                     from_response.set_cc(int(i.cc_code), ccdata1)
+#                 else:
+#                     from_response.cc_data = []
+#                 if i.bs_code != None:
+#                     from_response.set_bs(int(i.bs_code), bsdata1)
+#                 else:
+#                     from_response.bs_data = []
+#                 from_response.set_amount(str(i.amount))
+#                 if len(To_allocation_data) != 0:
+#                     for j in To_allocation_data:
+#                         if j.source_bscc_code == i.id:
+#                             cc_id.append(j.cc_code)
+#                             bs.append(j.bs_code)
+#                             bscc.append(j.bscc_code)
+#                             bsccdata2 = masterservice.get_mstsegment_id(bscc)
+#                             bscc_val.append(bsccdata2)
+#                             bs_data2 = masterservice.get_BS_id(bs)
+#                             bs_val.append(bs_data2)
+#                             cc_data2 = masterservice.get_CC_id(cc_id)
+#                             cc_val.append(cc_data2)
+#                             # cc_id.append(j.cc_code)
+#                             # bs_id.append(j.bs_code)
+#                             # bscc_id.append(j.bscc_code)
+#                             # bsccdata1 = masterservice.get_mstsegment(bscc_id)
+#                             # bs_data1 = userservice.get_BS(bs_id)
+#                             #
+#                             # cc_data1 = userservice.get_CC(cc_id)
+#
+#                             # bsccdata1 = masterservice.get_mstsegment([j.bscc_code])
+#                             # BS = userservice.get_BS(bs_id)
+#                             # CC = userservice.get_CC(cc_id)
+#                             to_response = allocation_response()
+#                             to_response.set_id(j.id)
+#                             if j.bscc_code != None:
+#                                 to_response.set_bscc(j.bscc_code, bsccdata2)
+#                             else:
+#                                 to_response.bscc_data = []
+#                             if j.cc_code != None:
+#                                 to_response.set_cc(int(j.cc_code), cc_data2)
+#                             else:
+#                                 to_response.cc_data = []
+#                             if j.bs_code != None:
+#                                 to_response.set_bs(int(j.bs_code), bs_data2)
+#                             else:
+#                                 to_response.bs_data = []
+#                             to_response.amount = str(j.amount)
+#                             to_response_arr.append(to_response)
+#                             from_response.set_to_data(to_response_arr)
+#                 else:
+#                     from_response.set_to_data(to_response_arr)
+#                 vlist.data.append(from_response)
+#                 vpage = NWisefinPaginator(from_obj, vys_page.get_index(), 10)
+#                 vlist.set_pagination(vpage)
+#         return vlist
+#
+#     def get_corelevel_logic(self,allocbj):
+#         vlist = NWisefinList()
+#         pprdata = json.loads(allocbj)
+#         masterservice = MASTER_SERVICE(self._scope())
+#         if pprdata["data"] == []:
+#             error_obj = NWisefinError()
+#             # error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
+#             # error_obj.set_description(ErrorDescription.NO_DATA_FOUND)
+#             return vlist
+#         prolist = NWisefinList()
+#         # bscc_data = []
+#         # from_bscc_data = []
+#         # amount = []
+#         for data in pprdata["data"]:
+#             # bscc_data = []
+#             # from_bscc_data = []
+#             # amount = []
+#
+#             bscc_id = data["bscc_data"]["id"]
+#             bs_id = data["bs_data"]["id"]
+#             bs_name = data["bs_data"]["name"]
+#             if data["bs_data"] != []:
+#                 master = masterservice.get_BS_mstbis([bscc_id])
+#             # if data["bscc_data"] != []:
+#             #     from_bscc_data.append(data["bscc_data"]["name"])
+#             #     for bs in master:
+#             #         if bs["id"] == data["bs_data"]["id"]:
+#             #     bscc_data.append(data["bs_data"]["name"])
+#             # elif data["cc_data"] != []:
+#             #     bscc_data.append(data["cc_data"]["name"])
+#             # amount.append(data["amount"])
+#             for data1 in data["to_data"]:
+#                 row = ''
+#                 bscc_data = []
+#                 from_bscc_data = []
+#                 amount = []
+#                 if data1["bscc_data"] != []:
+#                     bscc_data.append(data1["bscc_data"]["name"]+" -("+str(data1["bs_data"]["name"])+")")
+#                 if data1["bs_data"] != []:
+#                     for bs in master:
+#                         if bs["id"] == bs_id:
+#                             from_bscc_data.append(bs["name"])
+#                             amount.append(str(Decimal(data1["amount"])*-1))
+#                         else:
+#                             from_bscc_data.append(bs["name"])
+#                             amount.append(0.00)
+#                 elif data1["cc_data"] != []:
+#                     from_bscc_data.append(data1["cc_data"]["name"])
+#                 row = {"name":bscc_data,"value":from_bscc_data,"amount":amount}
+#                 prolist.append(row)
+#             # for data1 in data["to_data"]:
+#             #     bscc_data = []
+#             #     from_bscc_data = []
+#             #     amount = []
+#             #     if int(bscc_id) == data1["bscc_data"]["id"]:
+#             #         bscc_data.append(data1["bscc_data"]["name"])
+#                     # bscc_data.append(bs_name)
+#                     # for x in master:
+#                     #     from_bscc_data.append(x["name"])
+#                     #     if x["name"] == data1["bs_data"]["name"]:
+#                     #         amount.append(data1["amount"])
+#                     #     else:
+#                     #         amount.append(0.00)
+#                     # row = {"name": bscc_data, "value": from_bscc_data, "amount": amount}
+#                     # prolist.append(row)
+#         return prolist
+#
+    def ppr_mstbusinesssegement(self, request,query, vys_page):  #
+        masterservice =Masterservice()
+        pro_list = masterservice.ppr_mstbusinesssegement(request,query, vys_page)
         return pro_list
-
-    def ppr_businesssegement(self, query, vys_page,biz_id):  #
-        emp_service = MASTER_SERVICE(self._scope())
-        pro_list = emp_service.businesssegement(query, vys_page,biz_id)
-        return pro_list
-
-    def ppr_cc(self, query, vys_page):
-        emp_service = MASTER_SERVICE(self._scope())
-        pro_list = emp_service.cc(query, vys_page)
-        return pro_list
-
+#
+    # def ppr_businesssegement(self,, query, vys_page,biz_id):  #
+    #     emp_service = Masterservice(self._scope())
+    #     pro_list = emp_service.businesssegement(request,query, vys_page,biz_id)
+    #     return pro_list
+#
+#     def ppr_cc(self, query, vys_page):
+#         emp_service = MASTER_SERVICE(self._scope())
+#         pro_list = emp_service.cc(query, vys_page)
+#         return pro_list
+#
     def insert_allocation(self, request_obj, empid):
         allometa_obj_from = Allocation_meta.objects.create(level=request_obj.get_level(),
                                                            frombscccode=request_obj.get_frombscccode(),
@@ -767,32 +768,32 @@ class AllocationLevelService(NWisefinThread):
         error_obj.set_description = 'success'
         return error_obj
 
-    def fetch_allocation(self, id, user_id):
-        arr = []
-        try:
-            from_vari = Allocation_meta.objects.using(self._current_app_schema()).get(id=id,
-                                                                                      entity_id=self._entity_id())
-            from_vari = Allocation_meta.objects.using(self._current_app_schema()).filter(source_bscc_code=id)
-            allocation = MASTER_SERVICE(self._scope())
-            allocation_user = USER_SERVICE(self._scope())
-            for i in from_vari:
-                allocation_var = allocation_response()
-                allocation_var.frombscccode = allocation.get_mstsegment([from_vari.frombscccode])
-                allocation_var.bs_id = allocation_user.get_BS([i.bs_id])
-                allocation_var.cc_id = allocation_user.get_CC([i.cc_id])
-                arr.append(allocation_var)
-
-            return arr
-
-        except Allocation_meta.DoesNotExist:
-            error_obj = NWisefinError()
-            error_obj.set_code(ErrorMessage.INVALID_BANK_ID)
-            error_obj.set_description(ErrorDescription.INVALID_BANK_ID)
-            return error_obj
-
-    def fetch_all(self, id, vys_page):
-        userservice = USER_SERVICE(self._scope())
-        masterservice = MASTER_SERVICE(self._scope())
+    # def fetch_allocation(self,request, id, user_id):
+    #     arr = []
+    #     try:
+    #         from_vari = Allocation_meta.objects.using(self._current_app_schema()).get(id=id,
+    #                                                                                   entity_id=self._entity_id())
+    #         from_vari = Allocation_meta.objects.using(self._current_app_schema()).filter(source_bscc_code=id)
+    #         allocation =Masterservice()
+    #         allocation_user = Userservice()
+    #         for i in from_vari:
+    #             allocation_var = allocation_response()
+    #             allocation_var.frombscccode = allocation.get_mstsegment(request,[from_vari.frombscccode])
+    #             allocation_var.bs_id = allocation_user.get_BS([i.bs_id])
+    #             allocation_var.cc_id = allocation_user.get_CC([i.cc_id])
+    #             arr.append(allocation_var)
+    #
+    #         return arr
+    #
+    #     except Allocation_meta.DoesNotExist:
+    #         error_obj = NWisefinError()
+    #         error_obj.set_code(ErrorMessage.INVALID_BANK_ID)
+    #         error_obj.set_description(ErrorDescription.INVALID_BANK_ID)
+    #         return error_obj
+#
+    def fetch_all(self,request, id, vys_page):
+        userservice = Userservice()
+        masterservice = Masterservice()
         condition = Q(entity_id=self._entity_id())
         if id != None:
             condition &= Q(id=id)
@@ -814,9 +815,9 @@ class AllocationLevelService(NWisefinThread):
                 frombscc_id.append((i.frombscccode))
                 bs_val.append(i.bs_id)
                 cc_val.append(i.cc_id)
-            frombscc = masterservice.get_mstsegment_id(frombscc_id)
-            bs = masterservice.get_BS_id(bs_val)
-            cc = masterservice.get_CC_id(cc_val)
+            frombscc = masterservice.get_mstsegment(request,frombscc_id)
+            bs = masterservice.get_BS_id(request,bs_val)
+            cc = masterservice.get_CC_id(request,cc_val)
 
             To_allocation_data = Allocation_meta.objects.using(self._current_app_schema()).filter(status=1,
                                                                                                   source_bscc_code__in=allocation_arr,
@@ -828,9 +829,9 @@ class AllocationLevelService(NWisefinThread):
                 cc_id.append(k.cc_id)
                 bs_id.append(k.bs_id)
                 bscc_id.append(k.bscc_code)
-            # frombsccdata=masterservice.get_mstsegment(bscc_id)
-            # bs_data = userservice.get_bs(bs_id)
-            # cc_data = userservice.get_cc(cc_id)
+            frombsccdata2=masterservice.get_mstsegment(request,bscc_id)
+            bs_data2 = masterservice.get_BS_id(request,bs_id)
+            cc_data2 = masterservice.get_CC_id(request,cc_id)
             for i in allocation_data:
                 to_response_arr = []
                 from_response = allocation_response()
@@ -852,21 +853,21 @@ class AllocationLevelService(NWisefinThread):
                 # from_response.set_ratio()
                 for j in To_allocation_data:
                     if j.source_bscc_code.id == i.id:
-                        bsccdata = masterservice.get_mstsegment_id([j.bscc_code])
-                        bs_data = masterservice.get_BS_id(bs_id)
-                        cc_data = masterservice.get_CC_id(cc_id)
+                        # bsccdata = masterservice.get_mstsegment_id([j.bscc_code])
+                        # bs_data = masterservice.get_BS_id(bs_id)
+                        # cc_data = masterservice.get_CC_id(cc_id)
                         to_response = allocation_response()
                         to_response.set_id(j.id)
                         if j.bscc_code != None:
-                            to_response.set_bscc(int(j.bscc_code), bsccdata)
+                            to_response.set_bscc(int(j.bscc_code), frombsccdata2)
                         else:
                             to_response.bscc_data = []
                         if j.cc_id != None:
-                            to_response.set_cc(int(j.cc_id), cc_data)
+                            to_response.set_cc(int(j.cc_id), cc_data2)
                         else:
                             to_response.cc_data = []
                         if j.bs_id != None:
-                            to_response.set_bs(int(j.bs_id), bs_data)
+                            to_response.set_bs(int(j.bs_id), bs_data2)
                         else:
                             to_response.bs_data = []
                         to_response.set_ratio(float(j.ratio))
@@ -876,24 +877,24 @@ class AllocationLevelService(NWisefinThread):
                 vpage = NWisefinPaginator(allocation_data, vys_page.get_index(), 10)
                 vlist.set_pagination(vpage)
                 return vlist
-
-
-    def fetch_allocationsearch(self, query, from_date, vys_page, to_date):
-
-        condition = Q(status=1, entity_id=self._entity_id())
-        if from_date != None and from_date != "" and to_date != None and to_date != "":
-            condition &= Q(validity_from__range=[from_date, to_date])
-
-        category_obj = Allocation_meta.objects.using(self._current_app_schema()).filter(condition)[
-                       vys_page.get_offset():vys_page.get_query_limit()]
-        cate_list_data = NWisefinList()
-        for catobj in category_obj:
-            cat_data = USER_SERVICE(self._scope())
-            cat_data.get_asset_name(catobj.id)
-            vpage = NWisefinPaginator(category_obj, vys_page.get_index(), 10)
-            cate_list_data.set_pagination(vpage)
-        return cate_list_data
-
+#
+#
+#     def fetch_allocationsearch(self, query, from_date, vys_page, to_date):
+#
+#         condition = Q(status=1, entity_id=self._entity_id())
+#         if from_date != None and from_date != "" and to_date != None and to_date != "":
+#             condition &= Q(validity_from__range=[from_date, to_date])
+#
+#         category_obj = Allocation_meta.objects.using(self._current_app_schema()).filter(condition)[
+#                        vys_page.get_offset():vys_page.get_query_limit()]
+#         cate_list_data = NWisefinList()
+#         for catobj in category_obj:
+#             cat_data = USER_SERVICE(self._scope())
+#             cat_data.get_asset_name(catobj.id)
+#             vpage = NWisefinPaginator(category_obj, vys_page.get_index(), 10)
+#             cate_list_data.set_pagination(vpage)
+#         return cate_list_data
+#
     def total_amount(self, bizname, bs_code, cc_code):
         arr = NWisefinList()
         condition = Q(status=1)
@@ -942,10 +943,10 @@ class AllocationLevelService(NWisefinThread):
                 pprresponse.set_amount(i["amount"])
         arr.append(pprresponse)
         return arr
-
+#
     def fetch(self, request,vys_page):
-        data = MASTER_SERVICE(self._scope())
-        userservice = USER_SERVICE(self._scope())
+        data = Masterservice()
+        userservice = Userservice()
         val = Ppr_utilityservice(self._scope())
         condition = Q(source_bscc_code=None, entity_id=self._entity_id())
         if 'core_bscc' in request.GET and request.GET.get('core_bscc') != '' and request.GET.get('core_bscc') != None:
@@ -969,12 +970,12 @@ class AllocationLevelService(NWisefinThread):
                 cc_id = []
                 bs_id.append(catobj.bs_id)
                 cc_id.append(catobj.cc_id)
-                bs_data = data.get_BS_id(bs_id)
-                cc_data = data.get_CC_id(cc_id)
+                bs_data = data.get_BS_id(request,bs_id)
+                cc_data = data.get_CC_id(request,cc_id)
                 allocation = allocation_response()
                 allocation.set_id(catobj.id)
                 # allocation.set_frombscccode(catobj.frombscccode)
-                allocation.corebscc = data.get_mstsegment_id([catobj.frombscccode])
+                allocation.corebscc = data.get_mstsegment(request,[catobj.frombscccode])
                 if catobj.cc_id != None:
                     allocation.set_cc(catobj.cc_id, cc_data)
                 else:
@@ -993,7 +994,7 @@ class AllocationLevelService(NWisefinThread):
                 vpage = NWisefinPaginator(category_obj, vys_page.get_index(), 10)
                 cate_list_data.set_pagination(vpage)
         return cate_list_data
-
+#
     def implement_status(self, query, status, user_id):
         arr = []
         condition = Q(entity_id=self._entity_id())
@@ -1006,139 +1007,139 @@ class AllocationLevelService(NWisefinThread):
         success_obj.set_status(SuccessStatus.SUCCESS)
         return success_obj
 
-    def business_search(self, query, vys_page):
-        val = Ppr_utilityservice(self._scope())
-        data = MASTER_SERVICE(self._scope())
-        userservice = USER_SERVICE(self._scope())
-        condition = Q(status=1, entity_id=self._entity_id())
-        if query != None and query != "" and query != None and query != "":
-            condition &= Q(id__in=query)
-        category_obj = Allocation_meta.objects.using(self._current_app_schema()).filter(condition)[
-                       vys_page.get_offset():vys_page.get_query_limit()]
-        cate_list_data = NWisefinList()
-        for catobj in category_obj:
-            bs_id = []
-            cc_id = []
-            bs_id.append(catobj.bs_id)
-            cc_id.append(catobj.cc_id)
-            bs_data = userservice.get_BS(bs_id)
-            cc_data = userservice.get_CC(cc_id)
-            cat_data = MASTER_SERVICE(self._scope())
-            allocation = allocation_response()
-            allocation.set_id(catobj.id)
-            # allocation.set_frombscccode(catobj.frombscccode)
-            allocation.corebscc = data.get_mstsegment([catobj.frombscccode])
-            if catobj.cc_id != None:
-                allocation.set_cc(catobj.cc_id, cc_data)
-            else:
-                allocation.cc_data = []
-            if catobj.bs_id != None:
-                allocation.set_bs(catobj.bs_id, bs_data)
-            else:
-                allocation.bs_data = []
-            allocation.ratio = val.get_ratio(catobj.id)
-            allocation.set_status(catobj.status)
-            allocation.set_validity_from(catobj.validity_from)
-            allocation.set_validity_to(catobj.validity_to)
-            cate_list_data.append(allocation)
-            cate_list_data.append(cat_data.get_mstsegment(catobj.id))
-            vpage = NWisefinPaginator(category_obj, vys_page.get_index(), 10)
-            cate_list_data.set_pagination(vpage)
-        return cate_list_data
-
-    def allocation_level_child(self,filter_obj):
-        masterservice = MASTER_SERVICE(self._scope())
-        userservice = USER_SERVICE(self._scope())
-        prolist = NWisefinList()
-        condition = Q(status=1)
-        # if filter_obj.get_core_bscc() != None and filter_obj.get_core_bscc() != "":
-        #     condition &= Q(bscc_code=filter_obj.get_core_bscc())
-        # if filter_obj.get_bs_id() != None and filter_obj.get_bs_id() != "":
-        #     condition &= Q(bs_code=filter_obj.get_bs_id())
-        # if filter_obj.get_cc_id() != None and filter_obj.get_cc_id() != "":
-        #     condition &= Q(cc_code=filter_obj.get_cc_id())
-        # if filter_obj.get_level() != None and filter_obj.get_level() != "":
-        #     condition &= Q(level=filter_obj.get_level())
-        # condition &= Q(source_bscc_code=None)
-        # from_obj = Pprdata_maintable.objects.using(self._current_app_schema()).filter(condition)
-        if filter_obj.get_core_bscc() != None and filter_obj.get_core_bscc() != "":
-            bsccdata1 = masterservice.get_BS_mstbis([filter_obj.get_core_bscc()])
-            from_bs = [int(foo["id"]) for foo in bsccdata1]
-            child_condition = Q(bs_code__in=from_bs)
-        child_condition &= ~Q(source_bscc_code=None)
-        to_obj = Pprdata_maintable.objects.using(self._current_app_schema()).filter(child_condition)
-        bscc = []
-        bscc_val = []
-        cc_id = []
-        cc_val = []
-        bs = []
-        bs_val = []
-        vlist = NWisefinList()
-        # condition = Q(source_bscc_code=None)
-        # condition &= Q(id__in=arr)
-        # from_obj = Pprdata_maintable.objects.using(self._current_app_schema()).filter(condition)
-
-        if len(to_obj) == 0:
-            # error_obj = NWisefinError()
-            # error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
-            # error_obj.set_description(ErrorDescription.NO_DATA_FOUND)
-            pass
-        else:
-            bscc_id = []
-            bs_id = []
-            for i in to_obj:
-                bscc_id.append((i.bscc_code))
-                bs_id.append(i.bs_code)
-                cc_id.append(i.cc_code)
-            bsccdata1 = masterservice.get_mstsegment_id(bscc_id)
-            # bscc_value.append(bsccdata1)
-            bsdata1 = masterservice.get_BS_id(bs_id)
-            # bs_value.append(bsdata1)
-            ccdata1 = masterservice.get_CC_id(cc_id)
-            # cc_value.append)
-            to_response_arr = []
-            for i in to_obj:
-                from_obj = Pprdata_maintable.objects.using(self._current_app_schema()).filter(id=i.source_bscc_code)
-                # from_bscc = [foo.bscc_code for foo in from_obj]
-                from_bs = [int(foo.bs_code) for foo in from_obj]
-                to_bscc = []
-                to_bscc.append(i.bscc_code)
-                from_response = allocation_response()
-                from_response.set_id(i.id)
-                if i.bscc_code != None:
-                    from_response.set_bscc(int(i.bscc_code), bsccdata1)
-                else:
-                    from_response.bscc_data = []
-                if i.cc_code != None:
-                    from_response.set_cc(int(i.cc_code), ccdata1)
-                else:
-                    from_response.cc_data = []
-                if i.bs_code != None:
-                    from_response.set_bs(int(i.bs_code), bsdata1)
-                else:
-                    from_response.bs_data = []
-                from_response.set_amount(str(i.amount))
-                to_response_arr.append(from_response)
-            vlist2 = {"data":to_response_arr}
-            bscc_data = []
-            from_bscc_data = []
-            amount = []
-            bs_name = masterservice.get_BS_id(from_bs)
-            for name in bs_name:
-                bscc_data.append(name["name"])
-            master = masterservice.get_BS_mstbis(to_bscc)
-            amount = [0.00]*len(master)
-            for a in vlist2["data"]:
-                from_bscc_data = []
-                loop = 0
-                for bs in master:
-                    from_bscc_data.append(bs["name"])
-                    if bs["id"] == a.bs_data["id"]:
-                        # amount.append(a.amount)
-                        amount[loop]=a.amount
-                    loop = loop+1
-                    # else:
-                    #     amount.append(0.00)
-            row = {"name": bscc_data, "value": from_bscc_data, "amount": amount}
-            vlist.append(row)
-        return vlist
+#     def business_search(self, query, vys_page):
+#         val = Ppr_utilityservice(self._scope())
+#         data = MASTER_SERVICE(self._scope())
+#         userservice = USER_SERVICE(self._scope())
+#         condition = Q(status=1, entity_id=self._entity_id())
+#         if query != None and query != "" and query != None and query != "":
+#             condition &= Q(id__in=query)
+#         category_obj = Allocation_meta.objects.using(self._current_app_schema()).filter(condition)[
+#                        vys_page.get_offset():vys_page.get_query_limit()]
+#         cate_list_data = NWisefinList()
+#         for catobj in category_obj:
+#             bs_id = []
+#             cc_id = []
+#             bs_id.append(catobj.bs_id)
+#             cc_id.append(catobj.cc_id)
+#             bs_data = userservice.get_BS(bs_id)
+#             cc_data = userservice.get_CC(cc_id)
+#             cat_data = MASTER_SERVICE(self._scope())
+#             allocation = allocation_response()
+#             allocation.set_id(catobj.id)
+#             # allocation.set_frombscccode(catobj.frombscccode)
+#             allocation.corebscc = data.get_mstsegment([catobj.frombscccode])
+#             if catobj.cc_id != None:
+#                 allocation.set_cc(catobj.cc_id, cc_data)
+#             else:
+#                 allocation.cc_data = []
+#             if catobj.bs_id != None:
+#                 allocation.set_bs(catobj.bs_id, bs_data)
+#             else:
+#                 allocation.bs_data = []
+#             allocation.ratio = val.get_ratio(catobj.id)
+#             allocation.set_status(catobj.status)
+#             allocation.set_validity_from(catobj.validity_from)
+#             allocation.set_validity_to(catobj.validity_to)
+#             cate_list_data.append(allocation)
+#             cate_list_data.append(cat_data.get_mstsegment(catobj.id))
+#             vpage = NWisefinPaginator(category_obj, vys_page.get_index(), 10)
+#             cate_list_data.set_pagination(vpage)
+#         return cate_list_data
+#
+#     def allocation_level_child(self,filter_obj):
+#         masterservice = MASTER_SERVICE(self._scope())
+#         userservice = USER_SERVICE(self._scope())
+#         prolist = NWisefinList()
+#         condition = Q(status=1)
+#         # if filter_obj.get_core_bscc() != None and filter_obj.get_core_bscc() != "":
+#         #     condition &= Q(bscc_code=filter_obj.get_core_bscc())
+#         # if filter_obj.get_bs_id() != None and filter_obj.get_bs_id() != "":
+#         #     condition &= Q(bs_code=filter_obj.get_bs_id())
+#         # if filter_obj.get_cc_id() != None and filter_obj.get_cc_id() != "":
+#         #     condition &= Q(cc_code=filter_obj.get_cc_id())
+#         # if filter_obj.get_level() != None and filter_obj.get_level() != "":
+#         #     condition &= Q(level=filter_obj.get_level())
+#         # condition &= Q(source_bscc_code=None)
+#         # from_obj = Pprdata_maintable.objects.using(self._current_app_schema()).filter(condition)
+#         if filter_obj.get_core_bscc() != None and filter_obj.get_core_bscc() != "":
+#             bsccdata1 = masterservice.get_BS_mstbis([filter_obj.get_core_bscc()])
+#             from_bs = [int(foo["id"]) for foo in bsccdata1]
+#             child_condition = Q(bs_code__in=from_bs)
+#         child_condition &= ~Q(source_bscc_code=None)
+#         to_obj = Pprdata_maintable.objects.using(self._current_app_schema()).filter(child_condition)
+#         bscc = []
+#         bscc_val = []
+#         cc_id = []
+#         cc_val = []
+#         bs = []
+#         bs_val = []
+#         vlist = NWisefinList()
+#         # condition = Q(source_bscc_code=None)
+#         # condition &= Q(id__in=arr)
+#         # from_obj = Pprdata_maintable.objects.using(self._current_app_schema()).filter(condition)
+#
+#         if len(to_obj) == 0:
+#             # error_obj = NWisefinError()
+#             # error_obj.set_code(ErrorMessage.UNEXPECTED_ERROR)
+#             # error_obj.set_description(ErrorDescription.NO_DATA_FOUND)
+#             pass
+#         else:
+#             bscc_id = []
+#             bs_id = []
+#             for i in to_obj:
+#                 bscc_id.append((i.bscc_code))
+#                 bs_id.append(i.bs_code)
+#                 cc_id.append(i.cc_code)
+#             bsccdata1 = masterservice.get_mstsegment_id(bscc_id)
+#             # bscc_value.append(bsccdata1)
+#             bsdata1 = masterservice.get_BS_id(bs_id)
+#             # bs_value.append(bsdata1)
+#             ccdata1 = masterservice.get_CC_id(cc_id)
+#             # cc_value.append)
+#             to_response_arr = []
+#             for i in to_obj:
+#                 from_obj = Pprdata_maintable.objects.using(self._current_app_schema()).filter(id=i.source_bscc_code)
+#                 # from_bscc = [foo.bscc_code for foo in from_obj]
+#                 from_bs = [int(foo.bs_code) for foo in from_obj]
+#                 to_bscc = []
+#                 to_bscc.append(i.bscc_code)
+#                 from_response = allocation_response()
+#                 from_response.set_id(i.id)
+#                 if i.bscc_code != None:
+#                     from_response.set_bscc(int(i.bscc_code), bsccdata1)
+#                 else:
+#                     from_response.bscc_data = []
+#                 if i.cc_code != None:
+#                     from_response.set_cc(int(i.cc_code), ccdata1)
+#                 else:
+#                     from_response.cc_data = []
+#                 if i.bs_code != None:
+#                     from_response.set_bs(int(i.bs_code), bsdata1)
+#                 else:
+#                     from_response.bs_data = []
+#                 from_response.set_amount(str(i.amount))
+#                 to_response_arr.append(from_response)
+#             vlist2 = {"data":to_response_arr}
+#             bscc_data = []
+#             from_bscc_data = []
+#             amount = []
+#             bs_name = masterservice.get_BS_id(from_bs)
+#             for name in bs_name:
+#                 bscc_data.append(name["name"])
+#             master = masterservice.get_BS_mstbis(to_bscc)
+#             amount = [0.00]*len(master)
+#             for a in vlist2["data"]:
+#                 from_bscc_data = []
+#                 loop = 0
+#                 for bs in master:
+#                     from_bscc_data.append(bs["name"])
+#                     if bs["id"] == a.bs_data["id"]:
+#                         # amount.append(a.amount)
+#                         amount[loop]=a.amount
+#                     loop = loop+1
+#                     # else:
+#                     #     amount.append(0.00)
+#             row = {"name": bscc_data, "value": from_bscc_data, "amount": amount}
+#             vlist.append(row)
+#         return vlist
